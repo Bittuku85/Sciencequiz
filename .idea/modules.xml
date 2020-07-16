@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/Downloads-sciencequiz.iml" filepath="$PROJECT_DIR$/Downloads-sciencequiz.iml" group="sciencequiz" />
+      <module fileurl="file://$PROJECT_DIR$/QuizBee.iml" filepath="$PROJECT_DIR$/QuizBee.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sciencequiz/app.iml" filepath="$PROJECT_DIR$/sciencequiz/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sciencequiz/sciencequiz-sciencequiz.iml" filepath="$PROJECT_DIR$/sciencequiz/sciencequiz-sciencequiz.iml" group="sciencequiz/sciencequiz" />
+    </modules>
+  </component>
+</project>
