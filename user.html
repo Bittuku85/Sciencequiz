@@ -883,17 +883,31 @@
                     <div class="qr-code">
                         <i class="fas fa-qrcode" style="font-size: 3rem; color: #64748B;"></i>
                     </div>
-                    <div class="upi-info">
-                        <strong>UPI ID:</strong> tournaments@paytm<br>
-                        <strong>Amount:</strong> ₹<span id="qrAmount">0</span>
-                    </div>
-                    <p style="font-size: 0.9rem; color: #64748B;">Scan QR code or use UPI ID to pay</p>
+                                    <div class="upi-info">
+                    <strong>UPI ID:</strong> Bittukr@fam<br>
+                    <strong>Amount:</strong> ₹<span id="qrAmount">0</span><br>
+                    <strong>Note:</strong> Wallet Topup
                 </div>
+                <p style="font-size: 0.9rem; color: #64748B;">Scan QR code or use UPI ID to pay</p>
                 
-                <div class="modal-footer">
-                    <button class="modal-btn btn-secondary" onclick="closeModal('topupModal')">Cancel</button>
-                    <button class="modal-btn btn-primary" onclick="generatePaymentQR()">Generate QR</button>
+                <div id="orderIdSection" style="display: none; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Enter Transaction/Order ID</label>
+                        <input type="text" class="form-input" id="orderIdInput" placeholder="Enter transaction ID from UPI app" required>
+                    </div>
+                    <button class="modal-btn btn-success" onclick="submitTopupRequest()" style="width: 100%;">
+                        <i class="fas fa-check"></i> Submit Topup Request
+                    </button>
                 </div>
+            </div>
+            
+            <div class="modal-footer" id="topupModalFooter">
+                <button class="modal-btn btn-secondary" onclick="closeModal('topupModal')">Cancel</button>
+                <button class="modal-btn btn-primary" onclick="generatePaymentQR()">Generate QR</button>
+                <button class="modal-btn btn-warning" onclick="showOrderIdSection()" style="display: none;" id="paidBtn">
+                    <i class="fas fa-money-bill"></i> I Have Paid
+                </button>
+            </div>
             </div>
         </div>
 
@@ -1223,17 +1237,65 @@
             document.getElementById('qrAmount').textContent = amount;
             document.getElementById('qrSection').style.display = 'block';
             
-            // Simulate QR code generation
-            setTimeout(() => {
-                simulatePaymentSuccess(parseInt(amount));
-            }, 5000);
+            // Generate UPI payment link and QR code
+            const upiId = 'Bittukr@fam';
+            const upiLink = `upi://pay?pa=${upiId}&pn=Tournament Platform&am=${amount}&cu=INR&tn=Wallet Topup`;
+            
+            // Show QR code (in real implementation, generate actual QR code)
+            document.querySelector('.qr-code').innerHTML = `
+                <div style="padding: 1rem; text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📱</div>
+                    <p style="font-size: 0.9rem; margin-bottom: 1rem;">Scan with any UPI app</p>
+                    <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.9rem;">Pay with UPI App</a>
+                </div>
+            `;
+            
+            // Show "I Have Paid" button
+            document.getElementById('paidBtn').style.display = 'inline-block';
         }
 
-        function simulatePaymentSuccess(amount) {
-            currentUser.walletBalance += amount;
-            updateWalletDisplay();
-            showNotification(`₹${amount} added to wallet successfully!`, 'success');
+        function showOrderIdSection() {
+            document.getElementById('orderIdSection').style.display = 'block';
+            document.getElementById('topupModalFooter').style.display = 'none';
+        }
+
+        function submitTopupRequest() {
+            const amount = parseInt(document.getElementById('topupAmount').value);
+            const orderId = document.getElementById('orderIdInput').value.trim();
+            
+            if (!orderId) {
+                showNotification('Please enter transaction ID', 'error');
+                return;
+            }
+
+            // Create topup request
+            const topupRequest = {
+                id: 'req' + Date.now(),
+                userId: currentUser.uid,
+                userName: currentUser.name,
+                amount: amount,
+                orderId: orderId,
+                upiId: 'Bittukr@fam',
+                timestamp: new Date(),
+                status: 'pending'
+            };
+
+            // Store in pending topup requests (in real app, send to Firebase)
+            if (!window.pendingTopups) {
+                window.pendingTopups = [];
+            }
+            window.pendingTopups.push(topupRequest);
+
+            showNotification('Topup request submitted! Admin will verify and approve.', 'success');
             closeModal('topupModal');
+            
+            // Reset modal
+            document.getElementById('topupAmount').value = '';
+            document.getElementById('orderIdInput').value = '';
+            document.getElementById('qrSection').style.display = 'none';
+            document.getElementById('orderIdSection').style.display = 'none';
+            document.getElementById('topupModalFooter').style.display = 'flex';
+            document.getElementById('paidBtn').style.display = 'none';
         }
 
         // Profile Functions

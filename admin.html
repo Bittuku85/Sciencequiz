@@ -750,14 +750,18 @@
                 <i class="fas fa-users"></i>
                 Players
             </button>
-            <button class="nav-item" onclick="showSection('analytics')">
-                <i class="fas fa-chart-bar"></i>
-                Analytics
-            </button>
-            <button class="nav-item" onclick="showSection('settings')">
-                <i class="fas fa-cog"></i>
-                Settings
-            </button>
+                         <button class="nav-item" onclick="showSection('analytics')">
+                 <i class="fas fa-chart-bar"></i>
+                 Analytics
+             </button>
+             <button class="nav-item" onclick="showSection('topups')">
+                 <i class="fas fa-money-bill"></i>
+                 Topup Requests
+             </button>
+             <button class="nav-item" onclick="showSection('settings')">
+                 <i class="fas fa-cog"></i>
+                 Settings
+             </button>
         </div>
     </nav>
 
@@ -1026,18 +1030,65 @@
                     <h3 class="chart-title">Real-time Active Players</h3>
                     <canvas id="realTimeChart" width="800" height="300"></canvas>
                 </div>
-            </section>
+                         </section>
 
-            <!-- Settings Section -->
+             <!-- Topup Requests Section -->
+             <section id="topups" class="section">
+                 <div class="action-buttons">
+                     <button class="action-btn btn-success" onclick="approveAllPending()">
+                         <i class="fas fa-check-double"></i>
+                         Approve All Pending
+                     </button>
+                     <button class="action-btn btn-danger" onclick="rejectSelected()">
+                         <i class="fas fa-times"></i>
+                         Reject Selected
+                     </button>
+                     <button class="action-btn btn-primary" onclick="refreshTopupRequests()">
+                         <i class="fas fa-sync-alt"></i>
+                         Refresh
+                     </button>
+                 </div>
+
+                 <div class="data-table">
+                     <div class="table-header">
+                         <h3 class="table-title">Topup Requests</h3>
+                         <div class="search-box">
+                             <i class="fas fa-search"></i>
+                             <input type="text" placeholder="Search requests..." onkeyup="searchTopups(this.value)">
+                         </div>
+                     </div>
+                     <div class="table-container">
+                         <table id="topupsTable">
+                             <thead>
+                                 <tr>
+                                     <th><input type="checkbox" onchange="selectAllTopups(this)"></th>
+                                     <th>User Name</th>
+                                     <th>Amount</th>
+                                     <th>Order/Transaction ID</th>
+                                     <th>UPI ID</th>
+                                     <th>Request Time</th>
+                                     <th>Status</th>
+                                     <th>Actions</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="topupsTableBody">
+                                 <!-- Topup requests will be populated here -->
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+             </section>
+
+             <!-- Settings Section -->
             <section id="settings" class="section">
                 <div class="settings-grid">
                     <div class="settings-card">
                         <h3 class="settings-title">Payment Configuration</h3>
-                        <form id="paymentSettingsForm">
-                            <div class="form-group">
-                                <label class="form-label">UPI ID</label>
-                                <input type="text" class="form-input" id="upiId" value="tournaments@paytm" required>
-                            </div>
+                                                 <form id="paymentSettingsForm">
+                             <div class="form-group">
+                                 <label class="form-label">UPI ID</label>
+                                 <input type="text" class="form-input" id="upiId" value="Bittukr@fam" required>
+                             </div>
                             <div class="form-group">
                                 <label class="form-label">UPI Name</label>
                                 <input type="text" class="form-input" id="upiName" value="Tournament Platform" required>
@@ -1275,13 +1326,15 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // App State
-        let currentSection = 'dashboard';
-        let tournaments = [];
-        let players = [];
-        let analytics = {};
-        let selectedTournaments = [];
-        let editingTournament = null;
+                 // App State
+         let currentSection = 'dashboard';
+         let tournaments = [];
+         let players = [];
+         let analytics = {};
+         let selectedTournaments = [];
+         let editingTournament = null;
+         let topupRequests = [];
+         let selectedTopups = [];
 
         // Sample Data
         const sampleTournaments = [
@@ -1367,18 +1420,25 @@
             initializeApp();
         });
 
-        function initializeApp() {
-            tournaments = sampleTournaments;
-            players = samplePlayers;
-            
-            loadDashboard();
-            loadTournaments();
-            loadPlayers();
-            initializeCharts();
-            
-            // Update stats periodically
-            setInterval(updateRealTimeStats, 5000);
-        }
+                 function initializeApp() {
+             tournaments = sampleTournaments;
+             players = samplePlayers;
+             
+             // Initialize topup requests from user.html
+             if (window.pendingTopups) {
+                 topupRequests = window.pendingTopups;
+             }
+             
+             loadDashboard();
+             loadTournaments();
+             loadPlayers();
+             loadTopupRequests();
+             initializeCharts();
+             
+             // Update stats periodically
+             setInterval(updateRealTimeStats, 5000);
+             setInterval(syncTopupRequests, 10000); // Check for new topup requests every 10 seconds
+         }
 
         // Navigation Functions
         function toggleSidebar() {
@@ -1417,13 +1477,14 @@
             event.target.classList.add('active');
             
             // Update page title
-            const titles = {
-                dashboard: 'Dashboard',
-                tournaments: 'Tournament Management',
-                players: 'Player Management',
-                analytics: 'Analytics & Reports',
-                settings: 'Settings'
-            };
+                         const titles = {
+                 dashboard: 'Dashboard',
+                 tournaments: 'Tournament Management',
+                 players: 'Player Management',
+                 analytics: 'Analytics & Reports',
+                 topups: 'Topup Requests',
+                 settings: 'Settings'
+             };
             document.getElementById('pageTitle').textContent = titles[sectionId];
             
             currentSection = sectionId;
@@ -1439,10 +1500,13 @@
                 case 'players':
                     loadPlayers();
                     break;
-                case 'analytics':
-                    loadAnalytics();
-                    break;
-            }
+                                 case 'analytics':
+                     loadAnalytics();
+                     break;
+                 case 'topups':
+                     loadTopupRequests();
+                     break;
+             }
             
             // Close sidebar on mobile
             if (window.innerWidth <= 768) {
@@ -1715,11 +1779,180 @@
             showNotification('Players data exported successfully!', 'success');
         }
 
-        function sendBulkNotification() {
-            showNotification('Bulk notification sent to all players!', 'success');
-        }
+                 function sendBulkNotification() {
+             showNotification('Bulk notification sent to all players!', 'success');
+         }
 
-        // Analytics Functions
+         // Topup Management Functions
+         function loadTopupRequests() {
+             const tableBody = document.getElementById('topupsTableBody');
+             tableBody.innerHTML = '';
+             
+             topupRequests.forEach(request => {
+                 const row = createTopupRow(request);
+                 tableBody.appendChild(row);
+             });
+         }
+
+         function createTopupRow(request) {
+             const row = document.createElement('tr');
+             
+             const requestTime = new Date(request.timestamp);
+             const timeString = requestTime.toLocaleString('en-IN');
+             
+             row.innerHTML = `
+                 <td><input type="checkbox" value="${request.id}" onchange="toggleTopupSelection(this)"></td>
+                 <td>${request.userName}</td>
+                 <td>₹${request.amount}</td>
+                 <td><strong>${request.orderId}</strong></td>
+                 <td>${request.upiId}</td>
+                 <td>${timeString}</td>
+                 <td><span class="status-badge status-${request.status === 'pending' ? 'upcoming' : request.status}">${request.status.toUpperCase()}</span></td>
+                 <td>
+                     ${request.status === 'pending' ? `
+                         <button class="action-btn btn-success" style="padding: 0.5rem; margin-right: 0.5rem;" onclick="approveTopup('${request.id}')">
+                             <i class="fas fa-check"></i>
+                         </button>
+                         <button class="action-btn btn-danger" style="padding: 0.5rem;" onclick="rejectTopup('${request.id}')">
+                             <i class="fas fa-times"></i>
+                         </button>
+                     ` : `
+                         <span style="color: #64748B; font-size: 0.9rem;">${request.status === 'approved' ? 'Approved' : 'Rejected'}</span>
+                     `}
+                 </td>
+             `;
+             
+             return row;
+         }
+
+         function syncTopupRequests() {
+             // Check for new topup requests from user.html
+             if (window.pendingTopups && window.pendingTopups.length > topupRequests.length) {
+                 topupRequests = [...window.pendingTopups];
+                 if (currentSection === 'topups') {
+                     loadTopupRequests();
+                 }
+                 showNotification(`${window.pendingTopups.length - topupRequests.length + window.pendingTopups.length} new topup request(s) received!`, 'warning');
+             }
+         }
+
+         function refreshTopupRequests() {
+             syncTopupRequests();
+             loadTopupRequests();
+             showNotification('Topup requests refreshed!', 'success');
+         }
+
+         function approveTopup(requestId) {
+             const request = topupRequests.find(r => r.id === requestId);
+             if (!request) return;
+
+             if (confirm(`Approve topup of ₹${request.amount} for ${request.userName}?\nTransaction ID: ${request.orderId}`)) {
+                 request.status = 'approved';
+                 request.approvedAt = new Date();
+                 
+                 // Update user balance (simulate updating user data)
+                 updateUserBalance(request.userId, request.amount);
+                 
+                 loadTopupRequests();
+                 showNotification(`Topup approved! ₹${request.amount} added to ${request.userName}'s wallet.`, 'success');
+             }
+         }
+
+         function rejectTopup(requestId) {
+             const request = topupRequests.find(r => r.id === requestId);
+             if (!request) return;
+
+             const reason = prompt(`Reject topup for ${request.userName}?\nEnter reason (optional):`);
+             if (reason !== null) {
+                 request.status = 'rejected';
+                 request.rejectedAt = new Date();
+                 request.rejectionReason = reason;
+                 
+                 loadTopupRequests();
+                 showNotification(`Topup rejected for ${request.userName}.`, 'warning');
+             }
+         }
+
+         function updateUserBalance(userId, amount) {
+             // In real implementation, update user balance in Firebase
+             // For demo, update in sample data if user exists
+             const player = players.find(p => p.id === userId);
+             if (player) {
+                 player.walletBalance += amount;
+                 if (currentSection === 'players') {
+                     loadPlayers();
+                 }
+             }
+             console.log(`Updated balance for user ${userId}: +₹${amount}`);
+         }
+
+         function toggleTopupSelection(checkbox) {
+             if (checkbox.checked) {
+                 selectedTopups.push(checkbox.value);
+             } else {
+                 selectedTopups = selectedTopups.filter(id => id !== checkbox.value);
+             }
+         }
+
+         function selectAllTopups(checkbox) {
+             const checkboxes = document.querySelectorAll('#topupsTableBody input[type="checkbox"]');
+             checkboxes.forEach(cb => {
+                 cb.checked = checkbox.checked;
+                 toggleTopupSelection(cb);
+             });
+         }
+
+         function approveAllPending() {
+             const pendingRequests = topupRequests.filter(r => r.status === 'pending');
+             if (pendingRequests.length === 0) {
+                 showNotification('No pending requests to approve', 'warning');
+                 return;
+             }
+
+             if (confirm(`Approve all ${pendingRequests.length} pending topup requests?`)) {
+                 pendingRequests.forEach(request => {
+                     request.status = 'approved';
+                     request.approvedAt = new Date();
+                     updateUserBalance(request.userId, request.amount);
+                 });
+                 
+                 loadTopupRequests();
+                 showNotification(`${pendingRequests.length} topup requests approved!`, 'success');
+             }
+         }
+
+         function rejectSelected() {
+             if (selectedTopups.length === 0) {
+                 showNotification('Please select requests to reject', 'warning');
+                 return;
+             }
+
+             const reason = prompt(`Reject ${selectedTopups.length} selected requests?\nEnter reason (optional):`);
+             if (reason !== null) {
+                 selectedTopups.forEach(requestId => {
+                     const request = topupRequests.find(r => r.id === requestId);
+                     if (request && request.status === 'pending') {
+                         request.status = 'rejected';
+                         request.rejectedAt = new Date();
+                         request.rejectionReason = reason;
+                     }
+                 });
+                 
+                 selectedTopups = [];
+                 loadTopupRequests();
+                 showNotification('Selected requests rejected', 'warning');
+             }
+         }
+
+         function searchTopups(query) {
+             const rows = document.querySelectorAll('#topupsTableBody tr');
+             rows.forEach(row => {
+                 const text = row.textContent.toLowerCase();
+                 row.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+             });
+         }
+
+         // Analytics Functions
         function loadAnalytics() {
             // Update analytics stats
             document.getElementById('dailySignups').textContent = Math.floor(Math.random() * 50) + 20;
