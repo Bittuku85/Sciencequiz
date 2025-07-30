@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel • Free Fire Tournaments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js" defer></script>
+  <style>
+    :root {
+      --bg-primary: #F8FAFC;
+      --bg-secondary: #E2E8F0;
+      --text-dark: #1E293B;
+      --accent-blue: #2563EB;
+      --accent-gold: #FBBF24;
+      --accent-red: #DC2626;
+      --border: #CBD5E1;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:"Russo One", sans-serif; background:var(--bg-primary); color:var(--text-dark); }
+
+    /* ===== Navigation Drawer ===== */
+    .drawer {
+      position: fixed; inset:0; display:flex; flex-direction:column; z-index:999; background:#fff; transform:translateX(-100%); transition:.3s; width:260px; border-right:1px solid var(--border);
+    }
+    .drawer.show { transform:translateX(0); }
+    .drawer header { padding:1rem; font-size:1.25rem; background:var(--bg-secondary); }
+    .drawer button { background:none; border:none; display:block; width:100%; text-align:left; padding:1rem; border-bottom:1px solid var(--border); font-size:1rem; }
+    .drawer button.active { background:var(--accent-blue); color:#fff; }
+
+    /* ===== Top Bar ===== */
+    .topbar {
+      display:flex; align-items:center; gap:1rem; padding:1rem; background:#fff; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:998;
+    }
+    .topbar .menu-btn { font-size:1.5rem; background:none; border:none; }
+    .topbar h1 { font-size:1.25rem; }
+
+    /* ===== Sections ===== */
+    .view { display:none; padding:1rem; }
+    .view.active { display:block; }
+
+    /* ===== Cards & Widgets ===== */
+    .card-grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); margin-top:1rem; }
+    .widget {
+      background:#fff; border:1px solid var(--border); border-radius:.75rem; padding:1rem; text-align:center;
+    }
+    .widget h3 { font-size:1.5rem; color:var(--accent-blue); }
+
+    /* ===== Table ===== */
+    table { width:100%; border-collapse:collapse; margin-top:1rem; background:#fff; }
+    th, td { padding:.75rem; border:1px solid var(--border); text-align:left; }
+    th { background:var(--bg-secondary); }
+
+    button.primary { background:var(--accent-blue); color:#fff; border:none; padding:.5rem .75rem; border-radius:.5rem; cursor:pointer; }
+
+    /* ===== Bottom Nav (Mobile) ===== */
+    .bottom-nav {
+      display:flex; position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--border); justify-content:space-around; padding:.25rem 0; z-index:997;
+    }
+    .bottom-nav button { background:none; border:none; padding:.5rem 0; flex:1; }
+    .bottom-nav button.active { color:var(--accent-blue); }
+
+    /* ===== Modal ===== */
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; }
+    .modal.show { display:flex; }
+    .modal-content { background:#fff; border-radius:.75rem; padding:1.5rem; width:90%; max-width:450px; position:relative; }
+    .modal-content h3 { margin-bottom:1rem; }
+    .modal-content label { display:block; margin:.5rem 0 .25rem; }
+    .modal-content input, .modal-content select, .modal-content datetime-local {
+      width:100%; padding:.5rem; border:1px solid var(--border); border-radius:.5rem; margin-bottom:.75rem;
+    }
+    .modal-content .close { position:absolute; top:.75rem; right:.75rem; background:none; font-size:1.25rem; color:#999; }
+  </style>
+</head>
+<body>
+  <!-- ==== Drawer Nav ==== -->
+  <aside class="drawer" id="drawer">
+    <header>Admin Menu</header>
+    <button class="active" data-view="dashboard">Dashboard</button>
+    <button data-view="tournaments">Tournaments</button>
+    <button data-view="players">Players</button>
+    <button data-view="analytics">Analytics</button>
+    <button data-view="settings">Settings</button>
+  </aside>
+
+  <!-- ==== Top Bar ==== -->
+  <div class="topbar">
+    <button class="menu-btn" onclick="toggleDrawer()"><i class="fa-solid fa-bars"></i></button>
+    <h1 id="viewTitle">Dashboard</h1>
+    <span style="margin-left:auto;font-size:.9rem;">Admin</span>
+  </div>
+
+  <!-- ==== VIEWS ==== -->
+  <main>
+    <!-- Dashboard -->
+    <section id="dashboard" class="view active">
+      <h2>Overview</h2>
+      <div class="card-grid">
+        <div class="widget"><small>Total Tournaments</small><h3 id="totalTourn">32</h3></div>
+        <div class="widget"><small>Total Players</small><h3 id="totalPlayers">520</h3></div>
+        <div class="widget"><small>Online Players</small><h3 id="onlinePlayers">98</h3></div>
+        <div class="widget"><small>Wallet Held (INR)</small><h3 id="walletHeld">₹4,300</h3></div>
+      </div>
+      <div style="margin-top:1.5rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button class="primary" onclick="openTournModal()">Create Tournament</button>
+        <button class="primary">View Payments</button>
+        <button class="primary">Send Notification</button>
+      </div>
+    </section>
+
+    <!-- Tournaments -->
+    <section id="tournaments" class="view">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>Tournaments</h2>
+        <button class="primary" onclick="openTournModal()"><i class="fa-solid fa-plus"></i> New</button>
+      </div>
+      <input placeholder="Search.." oninput="filterTable(this.value,'tournTable')" style="margin-top:1rem;padding:.5rem;width:100%;max-width:300px;border:1px solid var(--border);border-radius:.5rem;" />
+      <table id="tournTable">
+        <thead><tr><th>Title</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Players -->
+    <section id="players" class="view">
+      <h2>Players</h2>
+      <input placeholder="Search players.." oninput="filterTable(this.value,'playerTable')" style="margin-top:1rem;padding:.5rem;width:100%;max-width:300px;border:1px solid var(--border);border-radius:.5rem;" />
+      <table id="playerTable">
+        <thead><tr><th>Name</th><th>UID</th><th>Wallet</th><th>Referrer</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Analytics -->
+    <section id="analytics" class="view">
+      <h2>Analytics</h2>
+      <canvas id="signupChart" height="180"></canvas>
+    </section>
+
+    <!-- Settings -->
+    <section id="settings" class="view">
+      <h2>Settings</h2>
+      <h3 style="margin-top:1rem;">Payment Gateway</h3>
+      <label>Razorpay Key</label>
+      <input placeholder="rzp_test_****" />
+      <label>Stripe Key</label>
+      <input placeholder="sk_test_****" />
+
+      <h3 style="margin-top:1rem;">Referral Bonus</h3>
+      <label>Bonus Amount (INR)</label>
+      <input type="number" value="10" />
+
+      <h3 style="margin-top:1rem;">Admin Users</h3>
+      <button class="primary"><i class="fa-solid fa-user-plus"></i> Add Admin</button>
+    </section>
+  </main>
+
+  <!-- Bottom Navigation (mobile helper) -->
+  <nav class="bottom-nav">
+    <button class="active" data-view="dashboard"><i class="fa-solid fa-gauge"></i></button>
+    <button data-view="tournaments"><i class="fa-solid fa-trophy"></i></button>
+    <button data-view="players"><i class="fa-solid fa-users"></i></button>
+    <button data-view="analytics"><i class="fa-solid fa-chart-line"></i></button>
+    <button data-view="settings"><i class="fa-solid fa-gear"></i></button>
+  </nav>
+
+  <!-- ==== Modals ==== -->
+  <div class="modal" id="tournModal">
+    <div class="modal-content">
+      <button class="close" onclick="toggleModal(false,'tournModal')">&times;</button>
+      <h3>Create / Edit Tournament</h3>
+      <label>Title</label>
+      <input id="tTitle" />
+      <label>Date & Time</label>
+      <input id="tDate" type="datetime-local" />
+      <label>Map</label>
+      <input id="tMap" />
+      <label>Prize Pool (INR)</label>
+      <input id="tPrize" type="number" />
+      <label>Entry Fee (INR)</label>
+      <input id="tFee" type="number" />
+      <label>Max Players</label>
+      <input id="tMax" type="number" />
+      <button class="primary" onclick="saveTournament()" style="margin-top:1rem;width:100%;">Save</button>
+    </div>
+  </div>
+
+  <!-- Firebase / Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <script>
+    // ========== Firebase Placeholder ==========
+    const firebaseConfig = {/* TODO: Add keys */};
+    // firebase.initializeApp(firebaseConfig);
+    // const db = firebase.firestore();
+
+    // ========== Drawer & Navigation ==========
+    function toggleDrawer(){ document.getElementById('drawer').classList.toggle('show'); }
+
+    document.querySelectorAll('.drawer button, .bottom-nav button').forEach(btn=>btn.addEventListener('click',()=>{
+      const view=btn.dataset.view;
+      switchView(view);
+      document.querySelectorAll('.drawer button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+      document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+      document.getElementById('viewTitle').innerText=view.charAt(0).toUpperCase()+view.slice(1);
+      toggleDrawer();
+    }));
+
+    function switchView(id){
+      document.querySelector('.view.active').classList.remove('active');
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ========== Mock Data ==========
+    const tournData=[
+      {id:'t1',title:'Bermuda Blitz',date:'2025-07-20 17:00',status:'Live'},
+      {id:'t2',title:'Kalahari Kings',date:'2025-07-21 18:00',status:'Upcoming'},
+      {id:'t3',title:'Purgatory Pro',date:'2025-07-19 16:00',status:'Completed'},
+    ];
+    const playerData=[
+      {name:'Rohan',uid:'987654321',wallet:500,ref:'Aman'},
+      {name:'Alisha',uid:'123456789',wallet:250,ref:'Rohan'},
+    ];
+
+    window.onload=()=>{
+      renderTable('tournTable',tournData,(row,item)=>{
+        row.innerHTML=`<td>${item.title}</td><td>${item.date}</td><td>${item.status}</td><td><button onclick=\`editTournament("${item.id}")\`>Edit</button></td>`;
+      });
+      renderTable('playerTable',playerData,(row,item)=>{
+        row.innerHTML=`<td>${item.name}</td><td>${item.uid}</td><td>₹${item.wallet}</td><td>${item.ref}</td>`;
+      });
+      // Chart.js Signup Graph
+      const ctx=document.getElementById('signupChart');
+      new Chart(ctx,{type:'line',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Sign-ups',data:[12,19,3,5,2,3,9],borderColor:'var(--accent-blue)',fill:false}]},options:{scales:{y:{beginAtZero:true}}}});
+    }
+
+    function renderTable(tblId,data,renderRow){
+      const tbody=document.querySelector(`#${tblId} tbody`);
+      tbody.innerHTML='';
+      data.forEach(item=>{const tr=document.createElement('tr');renderRow(tr,item);tbody.appendChild(tr);});
+    }
+
+    function filterTable(query,tblId){
+      query=query.toLowerCase();
+      document.querySelectorAll(`#${tblId} tbody tr`).forEach(tr=>{
+        tr.style.display=[...tr.cells].some(td=>td.textContent.toLowerCase().includes(query))?'':'none';
+      });
+    }
+
+    // ========== Tournament Modal ==========
+    function openTournModal(id){
+      if(id){
+        const data=tournData.find(t=>t.id===id);
+        document.getElementById('tTitle').value=data.title;
+        // etc fill other fields
+      }else{
+        document.querySelectorAll('#tournModal input').forEach(i=>i.value='');
+      }
+      toggleModal(true,'tournModal');
+    }
+
+    function saveTournament(){
+      // TODO: Save to Firestore
+      alert('Tournament saved');
+      toggleModal(false,'tournModal');
+    }
+
+    function editTournament(id){ openTournModal(id); }
+
+    // ========== Util ==========
+    function toggleModal(show,id){ document.getElementById(id).classList.toggle('show',show); }
+  </script>
+</body>
+</html>
