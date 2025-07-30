@@ -61,6 +61,12 @@
             margin: 0 auto;
         }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         .logo {
             font-family: 'Russo One', sans-serif;
             font-size: 1.5rem;
@@ -720,9 +726,27 @@
                     <i class="fas fa-trophy"></i>
                     FF Tournaments
                 </div>
-                <div class="wallet-balance" onclick="openTopupModal()">
-                    <i class="fas fa-wallet"></i>
-                    ₹<span id="walletAmount">500</span>
+                <div class="header-actions">
+                    <!-- Logged In User -->
+                    <div id="userSection" class="wallet-balance" style="display: none;" onclick="openTopupModal()">
+                        <i class="fas fa-wallet"></i>
+                        ₹<span id="walletAmount">500</span>
+                    </div>
+                    <div id="userMenu" style="display: none;">
+                        <button class="modal-btn btn-secondary" onclick="logoutUser()" style="padding: 0.5rem 1rem; margin-left: 0.5rem;">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    
+                    <!-- Guest User -->
+                    <div id="guestSection" class="header-actions">
+                        <button class="modal-btn btn-primary" onclick="openLoginModal()" style="padding: 0.5rem 1rem; margin-right: 0.5rem;">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <button class="modal-btn btn-secondary" onclick="openRegisterModal()" style="padding: 0.5rem 1rem;">
+                            <i class="fas fa-user-plus"></i> Register
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -935,6 +959,149 @@
                 </div>
             </div>
         </div>
+
+        <!-- Login Modal -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Login to Your Account</h3>
+                    <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
+                </div>
+                
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">Email or Phone</label>
+                        <input type="text" class="form-input" id="loginEmail" placeholder="Enter email or phone number" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Enter password" required>
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="rememberMe">
+                        <label for="rememberMe" style="margin: 0; font-size: 0.9rem;">Remember me</label>
+                    </div>
+                </form>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn btn-primary" onclick="loginUser()" style="width: 100%;">
+                        <span id="loginBtnText">Login</span>
+                        <span id="loginBtnLoader" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <p style="margin-bottom: 1rem; color: #64748B;">Don't have an account?</p>
+                    <button class="modal-btn btn-secondary" onclick="openRegisterModal()" style="width: 100%;">
+                        Create New Account
+                    </button>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                        <a href="#" onclick="openForgotPasswordModal()" style="color: var(--accent-blue); text-decoration: none;">
+                            Forgot Password?
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Modal -->
+        <div id="registerModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Create New Account</h3>
+                    <button class="close-btn" onclick="closeModal('registerModal')">&times;</button>
+                </div>
+                
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" id="registerName" placeholder="Enter your full name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="registerEmail" placeholder="Enter email address" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" class="form-input" id="registerPhone" placeholder="Enter phone number" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Free Fire UID</label>
+                        <input type="text" class="form-input" id="registerFFUID" placeholder="Enter Free Fire UID" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="registerPassword" placeholder="Create password (min 6 characters)" required minlength="6">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-input" id="confirmPassword" placeholder="Confirm your password" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Referral Code (Optional)</label>
+                        <input type="text" class="form-input" id="referralCodeInput" placeholder="Enter referral code if you have one">
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <label for="agreeTerms" style="margin: 0; font-size: 0.9rem; line-height: 1.4;">
+                            I agree to the <a href="#" style="color: var(--accent-blue);">Terms & Conditions</a> and <a href="#" style="color: var(--accent-blue);">Privacy Policy</a>
+                        </label>
+                    </div>
+                </form>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn btn-primary" onclick="registerUser()" style="width: 100%;">
+                        <span id="registerBtnText">Create Account</span>
+                        <span id="registerBtnLoader" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <p style="margin-bottom: 1rem; color: #64748B;">Already have an account?</p>
+                    <button class="modal-btn btn-secondary" onclick="openLoginModal()" style="width: 100%;">
+                        Login to Your Account
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forgot Password Modal -->
+        <div id="forgotPasswordModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Reset Password</h3>
+                    <button class="close-btn" onclick="closeModal('forgotPasswordModal')">&times;</button>
+                </div>
+                
+                <p style="margin-bottom: 1.5rem; color: #64748B;">
+                    Enter your email address and we'll send you a link to reset your password.
+                </p>
+                
+                <form id="forgotPasswordForm">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" id="forgotEmail" placeholder="Enter your email" required>
+                    </div>
+                </form>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn btn-secondary" onclick="closeModal('forgotPasswordModal')">Cancel</button>
+                    <button class="modal-btn btn-primary" onclick="resetPassword()">
+                        <span id="resetBtnText">Send Reset Link</span>
+                        <span id="resetBtnLoader" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Notification -->
@@ -1022,19 +1189,75 @@
         });
 
         function initializeApp() {
-            // Simulate user authentication
-            currentUser = {
-                uid: 'user123',
-                name: 'Rohan Sharma',
-                ffUID: '987654321',
-                walletBalance: 500,
-                referralCode: 'FF2025REF',
-                referralEarnings: 150
-            };
-
             tournaments = sampleTournaments;
+            
+            // Check if user is logged in
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // User is logged in
+                    loadUserData(user);
+                    showUserInterface();
+                } else {
+                    // User is not logged in
+                    showGuestInterface();
+                }
+            });
+            
             loadTournaments();
-            updateWalletDisplay();
+        }
+
+        async function loadUserData(user) {
+            try {
+                // Load user profile from Firestore
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: userData.name,
+                        phone: userData.phone,
+                        ffUID: userData.ffUID,
+                        walletBalance: userData.walletBalance || 0,
+                        referralCode: userData.referralCode,
+                        referralEarnings: userData.referralEarnings || 0,
+                        joinedAt: userData.joinedAt
+                    };
+                } else {
+                    // Create user document if doesn't exist
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || 'User',
+                        walletBalance: 0,
+                        referralCode: generateReferralCode(),
+                        referralEarnings: 0,
+                        joinedAt: new Date()
+                    };
+                    await db.collection('users').doc(user.uid).set(currentUser);
+                }
+                updateWalletDisplay();
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                showNotification('Error loading user data', 'error');
+            }
+        }
+
+        function showUserInterface() {
+            document.getElementById('userSection').style.display = 'flex';
+            document.getElementById('userMenu').style.display = 'flex';
+            document.getElementById('guestSection').style.display = 'none';
+        }
+
+        function showGuestInterface() {
+            document.getElementById('userSection').style.display = 'none';
+            document.getElementById('userMenu').style.display = 'none';
+            document.getElementById('guestSection').style.display = 'flex';
+            currentUser = null;
+        }
+
+        function generateReferralCode() {
+            return 'FF2025' + Math.random().toString(36).substr(2, 6).toUpperCase();
         }
 
         // Navigation Functions
@@ -1147,6 +1370,12 @@
         }
 
         function openRegistrationModal(tournamentId) {
+            if (!currentUser) {
+                showNotification('Please login to join tournaments', 'warning');
+                openLoginModal();
+                return;
+            }
+
             currentTournament = tournaments.find(t => t.id === tournamentId);
             if (!currentTournament) return;
 
@@ -1158,6 +1387,10 @@
                     <p><strong>Your Balance:</strong> ₹${currentUser.walletBalance}</p>
                 </div>
             `;
+
+            // Pre-fill with user data
+            document.getElementById('playerName').value = currentUser.name;
+            document.getElementById('playerUID').value = currentUser.ffUID;
 
             document.getElementById('registrationModal').classList.add('active');
         }
@@ -1237,6 +1470,12 @@
 
         // Payment Functions
         function openTopupModal() {
+            if (!currentUser) {
+                showNotification('Please login to access wallet', 'warning');
+                openLoginModal();
+                return;
+            }
+            
             document.getElementById('topupModal').classList.add('active');
             document.getElementById('qrSection').style.display = 'none';
         }
@@ -1382,6 +1621,12 @@
         }
 
         function openRegistrationsModal() {
+            if (!currentUser) {
+                showNotification('Please login to view registrations', 'warning');
+                openLoginModal();
+                return;
+            }
+
             const list = document.getElementById('registrationsList');
             list.innerHTML = '';
 
@@ -1421,6 +1666,252 @@
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
+        }
+
+        // Authentication Functions
+        function openLoginModal() {
+            closeAllModals();
+            document.getElementById('loginModal').classList.add('active');
+        }
+
+        function openRegisterModal() {
+            closeAllModals();
+            document.getElementById('registerModal').classList.add('active');
+        }
+
+        function openForgotPasswordModal() {
+            closeAllModals();
+            document.getElementById('forgotPasswordModal').classList.add('active');
+        }
+
+        async function loginUser() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+
+            const loginBtn = document.getElementById('loginBtnText');
+            const loginLoader = document.getElementById('loginBtnLoader');
+            loginBtn.style.display = 'none';
+            loginLoader.style.display = 'inline-block';
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('Login successful!', 'success');
+                closeModal('loginModal');
+                
+                // Clear form
+                document.getElementById('loginForm').reset();
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                let errorMessage = 'Login failed';
+                
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'No account found with this email';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Incorrect password';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Invalid email address';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = 'Too many failed attempts. Try again later';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                loginBtn.style.display = 'inline';
+                loginLoader.style.display = 'none';
+            }
+        }
+
+        async function registerUser() {
+            const name = document.getElementById('registerName').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const phone = document.getElementById('registerPhone').value.trim();
+            const ffUID = document.getElementById('registerFFUID').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const referralCode = document.getElementById('referralCodeInput').value.trim();
+            const agreeTerms = document.getElementById('agreeTerms').checked;
+
+            // Validation
+            if (!name || !email || !phone || !ffUID || !password || !confirmPassword) {
+                showNotification('Please fill all required fields', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            if (!agreeTerms) {
+                showNotification('Please agree to Terms & Conditions', 'error');
+                return;
+            }
+
+            const registerBtn = document.getElementById('registerBtnText');
+            const registerLoader = document.getElementById('registerBtnLoader');
+            registerBtn.style.display = 'none';
+            registerLoader.style.display = 'inline-block';
+
+            try {
+                // Create user account
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Update user profile
+                await user.updateProfile({
+                    displayName: name
+                });
+
+                // Create user document in Firestore
+                const userData = {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    ffUID: ffUID,
+                    walletBalance: 0,
+                    referralCode: generateReferralCode(),
+                    referralEarnings: 0,
+                    tournamentsJoined: 0,
+                    totalWinnings: 0,
+                    joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'active'
+                };
+
+                // Handle referral bonus
+                if (referralCode) {
+                    const referrerQuery = await db.collection('users').where('referralCode', '==', referralCode).get();
+                    if (!referrerQuery.empty) {
+                        const referrerDoc = referrerQuery.docs[0];
+                        const referrerId = referrerDoc.id;
+                        const referrerData = referrerDoc.data();
+                        
+                        // Add referral bonus to referrer
+                        await db.collection('users').doc(referrerId).update({
+                            referralEarnings: (referrerData.referralEarnings || 0) + 50,
+                            walletBalance: (referrerData.walletBalance || 0) + 50
+                        });
+
+                        // Record referral
+                        userData.referredBy = referrerId;
+                        userData.walletBalance = 25; // Bonus for new user
+                        
+                        showNotification('Account created! You got ₹25 signup bonus + ₹50 referral bonus!', 'success');
+                    } else {
+                        userData.walletBalance = 25; // Just signup bonus
+                        showNotification('Account created! You got ₹25 signup bonus!', 'success');
+                    }
+                } else {
+                    userData.walletBalance = 25; // Signup bonus
+                    showNotification('Account created! You got ₹25 signup bonus!', 'success');
+                }
+
+                await db.collection('users').doc(user.uid).set(userData);
+
+                closeModal('registerModal');
+                
+                // Clear form
+                document.getElementById('registerForm').reset();
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                let errorMessage = 'Registration failed';
+                
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = 'Email already registered. Please login instead.';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Invalid email address';
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = 'Password is too weak';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                registerBtn.style.display = 'inline';
+                registerLoader.style.display = 'none';
+            }
+        }
+
+        async function resetPassword() {
+            const email = document.getElementById('forgotEmail').value.trim();
+
+            if (!email) {
+                showNotification('Please enter your email address', 'error');
+                return;
+            }
+
+            const resetBtn = document.getElementById('resetBtnText');
+            const resetLoader = document.getElementById('resetBtnLoader');
+            resetBtn.style.display = 'none';
+            resetLoader.style.display = 'inline-block';
+
+            try {
+                await auth.sendPasswordResetEmail(email);
+                showNotification('Password reset link sent to your email!', 'success');
+                closeModal('forgotPasswordModal');
+                document.getElementById('forgotPasswordForm').reset();
+                
+            } catch (error) {
+                console.error('Password reset error:', error);
+                let errorMessage = 'Failed to send reset email';
+                
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'No account found with this email';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Invalid email address';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                resetBtn.style.display = 'inline';
+                resetLoader.style.display = 'none';
+            }
+        }
+
+        async function logoutUser() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await auth.signOut();
+                    showNotification('Logged out successfully!', 'success');
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    showNotification('Logout failed', 'error');
+                }
+            }
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
         }
 
         // Close modals when clicking outside
