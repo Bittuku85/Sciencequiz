@@ -1178,14 +1178,24 @@
             // Load real tournament data from database
             loadTournamentsFromDB();
             
+            // Enable Firebase Auth persistence
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+                console.log('Auth persistence enabled');
+            }).catch((error) => {
+                console.error('Error enabling auth persistence:', error);
+            });
+            
             // Check if user is logged in
             auth.onAuthStateChanged(user => {
+                console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
                 if (user) {
                     // User is logged in
+                    console.log('Loading user data for:', user.email);
                     loadUserData(user);
                     showUserInterface();
                 } else {
                     // User is not logged in
+                    console.log('No user logged in, showing guest interface');
                     showGuestInterface();
                 }
             });
@@ -1195,8 +1205,14 @@
 
         async function loadUserData(user) {
             try {
-                // Load user profile from Firestore
-                const userDoc = await db.collection('users').doc(user.uid).get();
+                console.log('Loading user data for UID:', user.uid);
+                
+                // Load user profile from Firestore with timeout
+                const userDoc = await Promise.race([
+                    db.collection('users').doc(user.uid).get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 10000))
+                ]);
+                
                 if (userDoc.exists) {
                     const userData = userDoc.data();
                     currentUser = {
@@ -1210,23 +1226,62 @@
                         referralEarnings: userData.referralEarnings || 0,
                         joinedAt: userData.joinedAt
                     };
+                    console.log('User data loaded successfully:', currentUser.name);
+                    showNotification(`Welcome back, ${currentUser.name}!`, 'success');
                 } else {
+                    console.log('User document does not exist, creating new one');
                     // Create user document if doesn't exist
                     currentUser = {
                         uid: user.uid,
                         email: user.email,
-                        name: user.displayName || 'User',
-                        walletBalance: 0,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 25, // Welcome bonus
                         referralCode: generateReferralCode(),
                         referralEarnings: 0,
-                        joinedAt: new Date()
+                        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'active'
                     };
-                    await db.collection('users').doc(user.uid).set(currentUser);
+                    
+                    // Save with retry mechanism
+                    let saveAttempts = 0;
+                    const maxAttempts = 3;
+                    
+                    while (saveAttempts < maxAttempts) {
+                        try {
+                            console.log(`Saving user data (attempt ${saveAttempts + 1})`);
+                            await db.collection('users').doc(user.uid).set(currentUser);
+                            console.log('User data saved successfully');
+                            showNotification(`Welcome ${currentUser.name}! You got ₹25 welcome bonus!`, 'success');
+                            break;
+                        } catch (saveError) {
+                            saveAttempts++;
+                            console.error(`Save attempt ${saveAttempts} failed:`, saveError);
+                            
+                            if (saveAttempts >= maxAttempts) {
+                                console.error('Failed to save user data after all attempts');
+                                showNotification('Failed to save user data. Please try again.', 'error');
+                                break;
+                            }
+                            
+                            await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+                        }
+                    }
                 }
                 updateWalletDisplay();
             } catch (error) {
                 console.error('Error loading user data:', error);
-                showNotification('Error loading user data', 'error');
+                showNotification('Error loading user data. Please check your connection.', 'error');
+                
+                // Fallback: use basic auth info
+                currentUser = {
+                    uid: user.uid,
+                    email: user.email,
+                    name: user.displayName || user.email.split('@')[0],
+                    walletBalance: 0,
+                    referralCode: 'N/A',
+                    referralEarnings: 0
+                };
+                updateWalletDisplay();
             }
         }
 
@@ -1646,7 +1701,20 @@
 
         // Utility Functions
         function updateWalletDisplay() {
-            document.getElementById('walletAmount').textContent = currentUser.walletBalance;
+            if (currentUser && currentUser.walletBalance !== undefined) {
+                const walletElement = document.getElementById('walletAmount');
+                if (walletElement) {
+                    walletElement.textContent = `₹${currentUser.walletBalance}`;
+                }
+                
+                // Update other wallet displays if they exist
+                const userSectionBalance = document.querySelector('#userSection .balance-amount');
+                if (userSectionBalance) {
+                    userSectionBalance.textContent = `₹${currentUser.walletBalance}`;
+                }
+                
+                console.log('Wallet display updated:', currentUser.walletBalance);
+            }
         }
 
         function closeModal(modalId) {
@@ -1826,7 +1894,28 @@
                     showNotification(`Account created! You got ₹${settings.signupBonus} signup bonus!`, 'success');
                 }
 
-                await db.collection('users').doc(user.uid).set(userData);
+                // Save user data with retry mechanism
+                let saveAttempts = 0;
+                const maxAttempts = 3;
+                
+                while (saveAttempts < maxAttempts) {
+                    try {
+                        console.log(`Attempting to save user data (attempt ${saveAttempts + 1}/${maxAttempts})`);
+                        await db.collection('users').doc(user.uid).set(userData);
+                        console.log('User data saved successfully');
+                        break;
+                    } catch (saveError) {
+                        saveAttempts++;
+                        console.error(`Save attempt ${saveAttempts} failed:`, saveError);
+                        
+                        if (saveAttempts >= maxAttempts) {
+                            throw new Error('Failed to save user data after multiple attempts');
+                        }
+                        
+                        // Wait before retry
+                        await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+                    }
+                }
 
                 closeModal('registerModal');
                 
