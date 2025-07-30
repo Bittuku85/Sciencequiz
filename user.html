@@ -1120,19 +1120,37 @@
 
     <script>
         // Firebase Configuration
+        // TODO: Replace with your actual Firebase project configuration
+        // Get these values from Firebase Console > Project Settings > General > Your apps
         const firebaseConfig = {
-            apiKey: "your-api-key",
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "your-app-id"
+            apiKey: "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA",
+            authDomain: "tournament-arena-app.firebaseapp.com",
+            projectId: "tournament-arena-app",
+            storageBucket: "tournament-arena-app.appspot.com",
+            messagingSenderId: "987654321098",
+            appId: "1:987654321098:web:abc123def456ghi789"
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        // Initialize Firebase with error handling
+        try {
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            const auth = firebase.auth();
+            
+            console.log('Firebase initialized successfully');
+            
+            // Test Firebase connection
+            setTimeout(() => {
+                if (firebaseConfig.apiKey === "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA") {
+                    console.warn('⚠️ WARNING: Using default Firebase config. Please update with your actual project settings.');
+                    showNotification('Using demo Firebase config. Check FIREBASE_SETUP.md for proper setup.', 'info');
+                }
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            showNotification('Firebase initialization failed. Running in demo mode.', 'error');
+        }
 
         // App State
         let currentUser = null;
@@ -1140,48 +1158,71 @@
         let tournaments = [];
         let userRegistrations = [];
 
-        // Sample Data
-        const sampleTournaments = [
-            {
-                id: 'tour1',
-                title: 'Elite Championship',
-                matchTime: '2025-01-15T18:00:00',
-                map: 'Bermuda',
-                prize: 5000,
-                entryFee: 100,
-                roomId: '123456',
-                roomPass: 'elite123',
-                maxPlayers: 50,
-                currentPlayers: 42,
-                status: 'live'
-            },
-            {
-                id: 'tour2', 
-                title: 'Weekend Warriors',
-                matchTime: '2025-01-16T20:00:00',
-                map: 'Purgatory',
-                prize: 2500,
-                entryFee: 50,
-                roomId: '789012',
-                roomPass: 'week789',
-                maxPlayers: 100,
-                currentPlayers: 67,
-                status: 'upcoming'
-            },
-            {
-                id: 'tour3',
-                title: 'Mega Battle',
-                matchTime: '2025-01-17T19:30:00',
-                map: 'Kalahari',
-                prize: 10000,
-                entryFee: 200,
-                roomId: '345678',
-                roomPass: 'mega456',
-                maxPlayers: 80,
-                currentPlayers: 15,
-                status: 'upcoming'
+
+
+        // Load tournaments from database
+        async function loadTournamentsFromDB() {
+            try {
+                console.log('Loading tournaments from database...');
+                const tournamentsSnapshot = await db.collection('tournaments').get();
+                tournaments = tournamentsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log(`Loaded ${tournaments.length} tournaments`);
+                loadTournaments(); // Update the display
+                loadAllTournaments(); // Update all tournaments display
+                showNotification('Tournaments loaded successfully!', 'success');
+            } catch (error) {
+                console.error('Error loading tournaments:', error);
+                tournaments = [];
+                loadTournaments(); // Update the display with empty array
+                loadAllTournaments(); // Update all tournaments display with empty array
+                
+                if (error.code === 'permission-denied') {
+                    console.log('Permission denied - Loading demo tournaments for testing');
+                    
+                    // Load demo tournaments for testing
+                    tournaments = [
+                        {
+                            id: 'demo_tour_1',
+                            title: 'Free Fire Championship - DEMO',
+                            matchTime: new Date(Date.now() + 3600000).toISOString(),
+                            map: 'Bermuda',
+                            prize: 5000,
+                            entryFee: 100,
+                            roomId: 'DEMO123',
+                            roomPass: 'demo123',
+                            maxPlayers: 50,
+                            currentPlayers: 25,
+                            status: 'upcoming'
+                        },
+                        {
+                            id: 'demo_tour_2',
+                            title: 'Solo Challenge - DEMO',
+                            matchTime: new Date(Date.now() + 7200000).toISOString(),
+                            map: 'Purgatory',
+                            prize: 2500,
+                            entryFee: 50,
+                            roomId: 'DEMO456',
+                            roomPass: 'demo456',
+                            maxPlayers: 100,
+                            currentPlayers: 67,
+                            status: 'upcoming'
+                        }
+                    ];
+                    
+                    loadTournaments();
+                    loadAllTournaments();
+                    showNotification('Running in DEMO mode - Check FIREBASE_SETUP.md for proper setup.', 'warning');
+                    
+                } else if (error.code === 'unavailable') {
+                    showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                } else {
+                    showNotification('Could not load tournaments. Please check your internet connection.', 'error');
+                }
             }
-        ];
+        }
 
         // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
@@ -1189,16 +1230,30 @@
         });
 
         function initializeApp() {
-            tournaments = sampleTournaments;
+            // Initialize empty tournaments array
+            tournaments = [];
+            
+            // Load real tournament data from database
+            loadTournamentsFromDB();
+            
+            // Enable Firebase Auth persistence
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+                console.log('Auth persistence enabled');
+            }).catch((error) => {
+                console.error('Error enabling auth persistence:', error);
+            });
             
             // Check if user is logged in
             auth.onAuthStateChanged(user => {
+                console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
                 if (user) {
                     // User is logged in
+                    console.log('Loading user data for:', user.email);
                     loadUserData(user);
                     showUserInterface();
                 } else {
                     // User is not logged in
+                    console.log('No user logged in, showing guest interface');
                     showGuestInterface();
                 }
             });
@@ -1208,8 +1263,14 @@
 
         async function loadUserData(user) {
             try {
-                // Load user profile from Firestore
-                const userDoc = await db.collection('users').doc(user.uid).get();
+                console.log('Loading user data for UID:', user.uid);
+                
+                // Load user profile from Firestore with timeout
+                const userDoc = await Promise.race([
+                    db.collection('users').doc(user.uid).get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 10000))
+                ]);
+                
                 if (userDoc.exists) {
                     const userData = userDoc.data();
                     currentUser = {
@@ -1223,23 +1284,96 @@
                         referralEarnings: userData.referralEarnings || 0,
                         joinedAt: userData.joinedAt
                     };
+                    console.log('User data loaded successfully:', currentUser.name);
+                    showNotification(`Welcome back, ${currentUser.name}!`, 'success');
                 } else {
+                    console.log('User document does not exist, creating new one');
                     // Create user document if doesn't exist
                     currentUser = {
                         uid: user.uid,
                         email: user.email,
-                        name: user.displayName || 'User',
-                        walletBalance: 0,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 25, // Welcome bonus
                         referralCode: generateReferralCode(),
                         referralEarnings: 0,
-                        joinedAt: new Date()
+                        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'active'
                     };
-                    await db.collection('users').doc(user.uid).set(currentUser);
+                    
+                    // Save with retry mechanism
+                    let saveAttempts = 0;
+                    const maxAttempts = 3;
+                    
+                    while (saveAttempts < maxAttempts) {
+                        try {
+                            console.log(`Saving user data (attempt ${saveAttempts + 1})`);
+                            await db.collection('users').doc(user.uid).set(currentUser);
+                            console.log('User data saved successfully');
+                            showNotification(`Welcome ${currentUser.name}! You got ₹25 welcome bonus!`, 'success');
+                            break;
+                        } catch (saveError) {
+                            saveAttempts++;
+                            console.error(`Save attempt ${saveAttempts} failed:`, saveError);
+                            
+                            if (saveAttempts >= maxAttempts) {
+                                console.error('Failed to save user data after all attempts');
+                                showNotification('Failed to save user data. Please try again.', 'error');
+                                break;
+                            }
+                            
+                            await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+                        }
+                    }
                 }
                 updateWalletDisplay();
             } catch (error) {
                 console.error('Error loading user data:', error);
-                showNotification('Error loading user data', 'error');
+                
+                if (error.code === 'permission-denied') {
+                    console.log('Permission denied - Creating demo user profile');
+                    showNotification('Running in DEMO mode - user data simulated.', 'warning');
+                    
+                    // Create demo user profile
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 100, // Demo balance
+                        referralCode: 'DEMO' + user.uid.substr(-4).toUpperCase(),
+                        referralEarnings: 25,
+                        tournamentsJoined: 3,
+                        totalWinnings: 150,
+                        status: 'active'
+                    };
+                    
+                } else if (error.code === 'unavailable') {
+                    showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                    
+                    // Fallback user
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 0,
+                        referralCode: 'N/A',
+                        referralEarnings: 0
+                    };
+                    
+                } else {
+                    showNotification('Error loading user data. Please check your connection.', 'error');
+                    
+                    // Fallback user
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 0,
+                        referralCode: 'N/A',
+                        referralEarnings: 0
+                    };
+                }
+                
+                updateWalletDisplay();
             }
         }
 
@@ -1659,7 +1793,20 @@
 
         // Utility Functions
         function updateWalletDisplay() {
-            document.getElementById('walletAmount').textContent = currentUser.walletBalance;
+            if (currentUser && currentUser.walletBalance !== undefined) {
+                const walletElement = document.getElementById('walletAmount');
+                if (walletElement) {
+                    walletElement.textContent = `₹${currentUser.walletBalance}`;
+                }
+                
+                // Update other wallet displays if they exist
+                const userSectionBalance = document.querySelector('#userSection .balance-amount');
+                if (userSectionBalance) {
+                    userSectionBalance.textContent = `₹${currentUser.walletBalance}`;
+                }
+                
+                console.log('Wallet display updated:', currentUser.walletBalance);
+            }
         }
 
         function closeModal(modalId) {
@@ -1839,7 +1986,28 @@
                     showNotification(`Account created! You got ₹${settings.signupBonus} signup bonus!`, 'success');
                 }
 
-                await db.collection('users').doc(user.uid).set(userData);
+                // Save user data with retry mechanism
+                let saveAttempts = 0;
+                const maxAttempts = 3;
+                
+                while (saveAttempts < maxAttempts) {
+                    try {
+                        console.log(`Attempting to save user data (attempt ${saveAttempts + 1}/${maxAttempts})`);
+                        await db.collection('users').doc(user.uid).set(userData);
+                        console.log('User data saved successfully');
+                        break;
+                    } catch (saveError) {
+                        saveAttempts++;
+                        console.error(`Save attempt ${saveAttempts} failed:`, saveError);
+                        
+                        if (saveAttempts >= maxAttempts) {
+                            throw new Error('Failed to save user data after multiple attempts');
+                        }
+                        
+                        // Wait before retry
+                        await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+                    }
+                }
 
                 closeModal('registerModal');
                 
