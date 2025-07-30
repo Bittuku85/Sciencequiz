@@ -593,15 +593,23 @@
         }
 
         .qr-code {
-            width: 200px;
-            height: 200px;
+            width: 220px;
+            height: auto;
+            min-height: 200px;
             margin: 0 auto 1rem;
             border: 2px solid var(--border);
             border-radius: 8px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: var(--bg-secondary);
+            background: white;
+            padding: 10px;
+        }
+
+        .qr-code canvas {
+            border-radius: 6px;
+            border: 1px solid var(--border);
         }
 
         .upi-info {
@@ -936,6 +944,9 @@
 
     <!-- Razorpay SDK -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- QR Code Generator -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
     <script>
         // Firebase Configuration
@@ -1237,18 +1248,51 @@
             document.getElementById('qrAmount').textContent = amount;
             document.getElementById('qrSection').style.display = 'block';
             
-            // Generate UPI payment link and QR code
+            // Generate UPI payment link
             const upiId = 'Bittukr@fam';
-            const upiLink = `upi://pay?pa=${upiId}&pn=Tournament Platform&am=${amount}&cu=INR&tn=Wallet Topup`;
+            const upiLink = `upi://pay?pa=${upiId}&pn=Tournament%20Platform&am=${amount}&cu=INR&tn=Wallet%20Topup`;
             
-            // Show QR code (in real implementation, generate actual QR code)
-            document.querySelector('.qr-code').innerHTML = `
-                <div style="padding: 1rem; text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📱</div>
-                    <p style="font-size: 0.9rem; margin-bottom: 1rem;">Scan with any UPI app</p>
-                    <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.9rem;">Pay with UPI App</a>
-                </div>
-            `;
+            // Clear the QR code container and show loading
+            const qrContainer = document.querySelector('.qr-code');
+            qrContainer.innerHTML = '<div style="padding: 2rem; text-align: center;"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent-blue);"></i><br><small>Generating QR Code...</small></div>';
+            
+            // Generate actual QR code
+            QRCode.toCanvas(upiLink, { 
+                width: 200, 
+                height: 200,
+                color: {
+                    dark: '#1E293B',
+                    light: '#FFFFFF'
+                }
+            }, function (error, canvas) {
+                if (error) {
+                    console.error('QR Code generation error:', error);
+                    qrContainer.innerHTML = `
+                        <div style="padding: 1rem; text-align: center;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--accent-red);">❌</div>
+                            <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent-red);">QR Generation Failed</p>
+                            <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block;">
+                                <i class="fas fa-mobile-alt"></i> Pay with UPI App
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    // Successfully generated QR code
+                    qrContainer.innerHTML = '';
+                    qrContainer.appendChild(canvas);
+                    
+                    // Add UPI link button below QR code
+                    const linkButton = document.createElement('div');
+                    linkButton.style.cssText = 'margin-top: 1rem; text-align: center;';
+                    linkButton.innerHTML = `
+                        <p style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #64748B;">Scan QR or click below</p>
+                        <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block;">
+                            <i class="fas fa-mobile-alt"></i> Open UPI App
+                        </a>
+                    `;
+                    qrContainer.appendChild(linkButton);
+                }
+            });
             
             // Show "I Have Paid" button
             document.getElementById('paidBtn').style.display = 'inline-block';
