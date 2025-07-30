@@ -884,7 +884,10 @@
                 
                 <div class="form-group">
                     <label class="form-label">Amount (₹)</label>
-                    <input type="number" class="form-input" id="topupAmount" placeholder="Enter amount" min="50" step="50">
+                    <input type="number" class="form-input" id="topupAmount" placeholder="Enter amount" min="50" step="1" max="50000">
+                    <small style="color: #64748B; font-size: 0.8rem; margin-top: 0.5rem; display: block;">
+                        Minimum: ₹50 | Maximum: ₹50,000
+                    </small>
                 </div>
                 
                 <div class="qr-section" id="qrSection" style="display: none;">
@@ -945,8 +948,8 @@
     <!-- Razorpay SDK -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     
-    <!-- QR Code Generator -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- QR Code Generator - Fast DOM Version -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 
     <script>
         // Firebase Configuration
@@ -1239,63 +1242,83 @@
         }
 
         function generatePaymentQR() {
-            const amount = document.getElementById('topupAmount').value;
+            const amount = parseFloat(document.getElementById('topupAmount').value);
             if (!amount || amount < 50) {
                 showNotification('Minimum top-up amount is ₹50', 'error');
                 return;
             }
 
-            document.getElementById('qrAmount').textContent = amount;
+            // Round amount to 2 decimal places to ensure exact payment
+            const exactAmount = Math.round(amount * 100) / 100;
+            
+            document.getElementById('qrAmount').textContent = exactAmount;
             document.getElementById('qrSection').style.display = 'block';
             
-            // Generate UPI payment link
+            // Generate UPI payment link with exact amount
             const upiId = 'Bittukr@fam';
-            const upiLink = `upi://pay?pa=${upiId}&pn=Tournament%20Platform&am=${amount}&cu=INR&tn=Wallet%20Topup`;
+            const merchantName = 'Tournament Platform';
+            const transactionNote = `Wallet Topup Rs${exactAmount}`;
+            const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${exactAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
             
-            // Clear the QR code container and show loading
+            // Clear container and start fast generation
             const qrContainer = document.querySelector('.qr-code');
-            qrContainer.innerHTML = '<div style="padding: 2rem; text-align: center;"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent-blue);"></i><br><small>Generating QR Code...</small></div>';
+            qrContainer.innerHTML = '<div style="padding: 1rem; text-align: center;"><i class="fas fa-cog fa-spin" style="font-size: 1.5rem; color: var(--accent-blue);"></i><br><small>Generating...</small></div>';
             
-            // Generate actual QR code
-            QRCode.toCanvas(upiLink, { 
-                width: 200, 
-                height: 200,
-                color: {
-                    dark: '#1E293B',
-                    light: '#FFFFFF'
-                }
-            }, function (error, canvas) {
-                if (error) {
-                    console.error('QR Code generation error:', error);
-                    qrContainer.innerHTML = `
-                        <div style="padding: 1rem; text-align: center;">
-                            <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--accent-red);">❌</div>
-                            <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent-red);">QR Generation Failed</p>
-                            <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block;">
-                                <i class="fas fa-mobile-alt"></i> Pay with UPI App
+            try {
+                // Fast QR Code generation
+                const qr = qrcode(0, 'M'); // Type 0 = auto, Error correction level M
+                qr.addData(upiLink);
+                qr.make();
+                
+                // Create QR code HTML instantly
+                const qrHTML = qr.createImgTag(4, 8); // cell size 4, margin 8
+                
+                // Clear container and add QR code
+                qrContainer.innerHTML = `
+                    <div style="text-align: center;">
+                        ${qrHTML}
+                        <div style="margin-top: 1rem;">
+                            <p style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #64748B;">
+                                Pay exactly <strong>₹${exactAmount}</strong>
+                            </p>
+                            <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block; margin-top: 0.5rem;">
+                                <i class="fas fa-mobile-alt"></i> Open UPI App
                             </a>
                         </div>
+                    </div>
+                `;
+                
+                // Style the QR code image
+                const qrImg = qrContainer.querySelector('img');
+                if (qrImg) {
+                    qrImg.style.cssText = `
+                        border: 2px solid var(--border);
+                        border-radius: 8px;
+                        background: white;
+                        padding: 10px;
+                        max-width: 200px;
+                        height: auto;
                     `;
-                } else {
-                    // Successfully generated QR code
-                    qrContainer.innerHTML = '';
-                    qrContainer.appendChild(canvas);
-                    
-                    // Add UPI link button below QR code
-                    const linkButton = document.createElement('div');
-                    linkButton.style.cssText = 'margin-top: 1rem; text-align: center;';
-                    linkButton.innerHTML = `
-                        <p style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #64748B;">Scan QR or click below</p>
-                        <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block;">
-                            <i class="fas fa-mobile-alt"></i> Open UPI App
-                        </a>
-                    `;
-                    qrContainer.appendChild(linkButton);
                 }
-            });
+                
+            } catch (error) {
+                console.error('QR Code generation error:', error);
+                qrContainer.innerHTML = `
+                    <div style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 1rem; color: var(--accent-red);">⚠️</div>
+                        <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent-red);">QR Generation Failed</p>
+                        <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block;">
+                            <i class="fas fa-mobile-alt"></i> Pay ₹${exactAmount} via UPI
+                        </a>
+                    </div>
+                `;
+            }
             
             // Show "I Have Paid" button
             document.getElementById('paidBtn').style.display = 'inline-block';
+            
+            // Store exact amount for validation
+            window.currentTopupAmount = exactAmount;
         }
 
         function showOrderIdSection() {
@@ -1304,7 +1327,7 @@
         }
 
         function submitTopupRequest() {
-            const amount = parseInt(document.getElementById('topupAmount').value);
+            const exactAmount = window.currentTopupAmount || parseFloat(document.getElementById('topupAmount').value);
             const orderId = document.getElementById('orderIdInput').value.trim();
             
             if (!orderId) {
@@ -1312,16 +1335,22 @@
                 return;
             }
 
-            // Create topup request
+            if (!exactAmount || exactAmount < 50) {
+                showNotification('Invalid amount', 'error');
+                return;
+            }
+
+            // Create topup request with exact amount
             const topupRequest = {
                 id: 'req' + Date.now(),
                 userId: currentUser.uid,
                 userName: currentUser.name,
-                amount: amount,
+                amount: exactAmount, // Use exact amount from QR generation
                 orderId: orderId,
                 upiId: 'Bittukr@fam',
                 timestamp: new Date(),
-                status: 'pending'
+                status: 'pending',
+                note: `Wallet Topup Rs${exactAmount}` // Match transaction note
             };
 
             // Store in pending topup requests (in real app, send to Firebase)
@@ -1330,7 +1359,7 @@
             }
             window.pendingTopups.push(topupRequest);
 
-            showNotification('Topup request submitted! Admin will verify and approve.', 'success');
+            showNotification(`Topup request for ₹${exactAmount} submitted! Admin will verify payment.`, 'success');
             closeModal('topupModal');
             
             // Reset modal
@@ -1340,6 +1369,7 @@
             document.getElementById('orderIdSection').style.display = 'none';
             document.getElementById('topupModalFooter').style.display = 'flex';
             document.getElementById('paidBtn').style.display = 'none';
+            window.currentTopupAmount = null; // Clear stored amount
         }
 
         // Profile Functions
