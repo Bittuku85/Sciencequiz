@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Free Fire Tournaments</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet" />
+  <!-- Lottie & Icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    /* ===== Color Palette ===== */
+    :root {
+      --bg-primary: #F8FAFC;
+      --bg-secondary: #E2E8F0;
+      --text-dark: #1E293B;
+      --accent-blue: #2563EB;
+      --accent-gold: #FBBF24;
+      --accent-red: #DC2626;
+      --border: #CBD5E1;
+    }
+
+    /* ===== Global Styles ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: "Russo One", sans-serif; background: var(--bg-primary); color: var(--text-dark); scroll-behavior: smooth; }
+    a { text-decoration: none; color: inherit; }
+    h2 { margin: 1rem 0; }
+    button {
+      cursor: pointer;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.5rem;
+      background: var(--accent-blue);
+      color: #fff;
+      transition: background 0.3s;
+    }
+    button:hover { background: #1d4ed8; }
+    section { padding: 1rem; }
+
+    /* ===== Hero ===== */
+    #hero {
+      background: url('https://images.unsplash.com/photo-1599508633271-f94e1a0d7dda?auto=format&fit=crop&w=1350&q=80') center/cover no-repeat;
+      min-height: 50vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #fff;
+      position: relative;
+    }
+    #hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+    }
+    #hero > * { position: relative; z-index: 1; }
+    #hero h1 { font-size: 2.25rem; margin-bottom: 1rem; }
+
+    /* ===== Tournament Tabs ===== */
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
+    .tabs button {
+      background: var(--bg-secondary);
+      color: var(--text-dark);
+    }
+    .tabs button.active { background: var(--accent-blue); color: #fff; }
+    .card-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); }
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .card small { color: gray; }
+
+    /* ===== Refer & Profile ===== */
+    .refer-code { font-size: 1.5rem; background: var(--bg-secondary); padding: .5rem 1rem; border-radius: .5rem; margin: 1rem 0; word-break: break-all; }
+    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; overflow: hidden; margin-bottom: 1rem; }
+
+    /* ===== Bottom Nav ===== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      background: #fff;
+      border-top: 1px solid var(--border);
+      justify-content: space-around;
+      padding: .25rem 0;
+    }
+    .bottom-nav button {
+      flex: 1;
+      background: none;
+      padding: .5rem 0;
+      color: var(--text-dark);
+    }
+    .bottom-nav button.active { color: var(--accent-blue); }
+
+    /* ===== Modal ===== */
+    .modal {
+      position: fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(0,0,0,.6); }
+    .modal.show { display:flex; }
+    .modal-content {
+      background:#fff; padding:1.5rem; border-radius:.75rem; width:90%; max-width:400px;
+    }
+    .modal-content h3 { margin-bottom:1rem; }
+    .modal-content label { display:block; margin:.5rem 0 .25rem; }
+    .modal-content input {
+      width:100%; padding:.5rem; border:1px solid var(--border); border-radius:.5rem; margin-bottom:.75rem;
+    }
+    .modal-content .close {
+      position:absolute; top:.75rem; right:.75rem; background:none; color:#999; font-size:1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- ==== HERO / HOME ==== -->
+  <section id="hero">
+    <h1>Free Fire Tournaments</h1>
+    <button id="playNowBtn">Play Now</button>
+  </section>
+
+  <!-- ==== TOURNAMENTS ==== -->
+  <section id="tournaments">
+    <h2>Tournaments</h2>
+    <div class="tabs">
+      <button class="active" data-tab="live">Live</button>
+      <button data-tab="upcoming">Upcoming</button>
+      <button data-tab="past">Past</button>
+    </div>
+    <div class="card-grid" id="tournGrid"></div>
+  </section>
+
+  <!-- ==== REFER & EARN ==== -->
+  <section id="refer">
+    <h2>Refer & Earn</h2>
+    <p>Your Code:</p>
+    <div class="refer-code" id="referCode">XYZ123</div>
+    <button onclick="share('whatsapp')"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+    <button onclick="share('telegram')"><i class="fa-brands fa-telegram"></i> Telegram</button>
+    <button onclick="copyReferral()"><i class="fa-solid fa-link"></i> Copy Link</button>
+    <p style="margin-top:1rem;">Credits Earned: <span id="creditEarned">₹0</span></p>
+  </section>
+
+  <!-- ==== PROFILE ==== -->
+  <section id="profile">
+    <h2>Profile</h2>
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="profile-avatar"><img src="https://i.pravatar.cc/100?img=8" alt="avatar" width="100%" /></div>
+      <p id="playerName">John Doe</p>
+      <small>FF UID: <span id="playerUID">999888777</span></small>
+      <p style="margin-top:.5rem;">Wallet Balance: <span id="walletBalance">₹250</span></p>
+      <button id="topUpBtn" style="margin-top:1rem;background:var(--accent-gold);color:#000;">Top-up</button>
+    </div>
+
+    <h3 style="margin-top:2rem;">My Registrations</h3>
+    <ul id="registrationList" style="list-style:none;padding:0;margin-top:.5rem;"></ul>
+  </section>
+
+  <!-- ==== BOTTOM NAVIGATION ==== -->
+  <nav class="bottom-nav">
+    <button class="active" data-scroll="hero"><i class="fa-solid fa-house"></i></button>
+    <button data-scroll="tournaments"><i class="fa-solid fa-trophy"></i></button>
+    <button data-scroll="refer"><i class="fa-solid fa-user-group"></i></button>
+    <button data-scroll="profile"><i class="fa-solid fa-user"></i></button>
+  </nav>
+
+  <!-- ==== MODALS ==== -->
+  <div class="modal" id="joinModal">
+    <div class="modal-content">
+      <button class="close" onclick="toggleModal(false, 'joinModal')">&times;</button>
+      <h3>Join Tournament</h3>
+      <form id="joinForm">
+        <label for="playerNameInput">Name</label>
+        <input id="playerNameInput" required />
+        <label for="uidInput">Free Fire UID</label>
+        <input id="uidInput" required />
+        <input type="hidden" id="hiddenTournId" />
+        <button type="submit">Pay & Join</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="paymentModal">
+    <div class="modal-content">
+      <button class="close" onclick="toggleModal(false, 'paymentModal')">&times;</button>
+      <h3>Top-up Wallet</h3>
+      <label for="topUpAmount">Amount (INR)</label>
+      <input id="topUpAmount" type="number" min="1" />
+      <button onclick="processTopUp()">Proceed to Pay</button>
+    </div>
+  </div>
+
+  <!-- ==== Placeholder Firebase & Logic ==== -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script>
+    // ========== Config & Initialization ==========
+    const firebaseConfig = {/* TODO: Your Firebase Keys */};
+    // firebase.initializeApp(firebaseConfig);
+    // const db = firebase.firestore();
+
+    // ========== Mock Data ==========
+    const tournaments = {
+      live: [
+        { id: 't1', title: 'Bermuda Blitz', time: 'Today 5:00 PM', map: 'Bermuda', prize: 1000, players: 82, max: 100, entryFee:50 },
+      ],
+      upcoming: [
+        { id: 't2', title: 'Kalahari Kings', time: 'Tomorrow 6:00 PM', map: 'Kalahari', prize: 1500, players: 10, max: 100, entryFee:50 },
+      ],
+      past: [
+        { id: 't3', title: 'Purgatory Pro', time: 'Yesterday', map: 'Purgatory', prize: 800, players: 100, max: 100, entryFee:50 },
+      ]
+    };
+
+    // ========== UI Interactions ==========
+    const grid = document.getElementById('tournGrid');
+    const tabButtons = document.querySelectorAll('.tabs button');
+
+    tabButtons.forEach(btn => btn.addEventListener('click', () => {
+      document.querySelector('.tabs button.active').classList.remove('active');
+      btn.classList.add('active');
+      populateGrid(btn.dataset.tab);
+    }));
+
+    function populateGrid(tab){
+      grid.innerHTML='';
+      tournaments[tab].forEach(t=>{
+        const card=document.createElement('div');
+        card.className='card';
+        card.innerHTML=`<div><h3>${t.title}</h3><small>${t.time}</small><p>Map: ${t.map}</p><p>Prize: ₹${t.prize}</p><p>${t.players}/${t.max} Players</p></div><button onclick="openJoinModal('${t.id}', '${t.entryFee}')">Join (₹${t.entryFee})</button>`;
+        grid.appendChild(card);
+      });
+    }
+    populateGrid('live');
+
+    // Smooth anchor via bottom nav
+    document.querySelectorAll('.bottom-nav button').forEach(btn=>btn.addEventListener('click',()=>{
+      document.querySelector('.bottom-nav button.active').classList.remove('active');
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.scroll).scrollIntoView({behavior:'smooth'});
+    }));
+
+    document.getElementById('playNowBtn').onclick=()=>document.getElementById('tournaments').scrollIntoView({behavior:'smooth'});
+
+    // ========== Modal Helpers ==========
+    function toggleModal(show,id){ document.getElementById(id).classList.toggle('show',show); }
+
+    function openJoinModal(tournId, fee){
+      document.getElementById('hiddenTournId').value = tournId;
+      toggleModal(true,'joinModal');
+    }
+
+    document.getElementById('joinForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      const tournId=document.getElementById('hiddenTournId').value;
+      const name=document.getElementById('playerNameInput').value;
+      const uid=document.getElementById('uidInput').value;
+      joinTournament(tournId, 'mockUserId', name, uid);
+    });
+
+    document.getElementById('topUpBtn').onclick=()=>toggleModal(true,'paymentModal');
+
+    // ========== Business Logic Placeholders ==========
+    async function joinTournament(tournId, userId, name, uid){
+      try{
+        // TODO: Integrate Razorpay/Stripe here
+        console.log('Processing payment & joining', tournId);
+        // await processPayment(fee);
+        // await db.collection('tournaments').doc(tournId).collection('registrations').add({ userId, name, uid, timestamp: Date.now() });
+        // Deduct wallet...
+        alert('Joined Successfully!');
+        toggleModal(false,'joinModal');
+      }catch(err){ alert('Payment Failed'); }
+    }
+
+    function share(platform){
+      const code=document.getElementById('referCode').innerText;
+      const msg=`Join me in Free Fire tournaments & win! Use my code ${code}.`;
+      let url='';
+      if(platform==='whatsapp') url=`https://wa.me/?text=${encodeURIComponent(msg)}`;
+      else if(platform==='telegram') url=`https://t.me/share/url?url=&text=${encodeURIComponent(msg)}`;
+      window.open(url,'_blank');
+    }
+
+    function copyReferral(){
+      navigator.clipboard.writeText(document.getElementById('referCode').innerText);
+      alert('Referral code copied!');
+    }
+
+    function processTopUp(){
+      const amt=document.getElementById('topUpAmount').value;
+      if(!amt) return alert('Enter amount');
+      // TODO: Integrate payment gateway
+      alert('Payment successful! Wallet credited.');
+      toggleModal(false,'paymentModal');
+    }
+  </script>
+</body>
+</html>
