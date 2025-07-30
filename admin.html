@@ -1362,84 +1362,7 @@
          let topupRequests = [];
          let selectedTopups = [];
 
-        // Sample Data
-        const sampleTournaments = [
-            {
-                id: 'tour1',
-                title: 'Elite Championship',
-                datetime: '2025-01-15T18:00',
-                map: 'Bermuda',
-                prizePool: 5000,
-                entryFee: 100,
-                maxPlayers: 50,
-                currentPlayers: 42,
-                status: 'live',
-                roomId: '123456',
-                roomPass: 'elite123'
-            },
-            {
-                id: 'tour2',
-                title: 'Weekend Warriors',
-                datetime: '2025-01-16T20:00',
-                map: 'Purgatory',
-                prizePool: 2500,
-                entryFee: 50,
-                maxPlayers: 100,
-                currentPlayers: 67,
-                status: 'upcoming',
-                roomId: '789012',
-                roomPass: 'week789'
-            },
-            {
-                id: 'tour3',
-                title: 'Mega Battle',
-                datetime: '2025-01-17T19:30',
-                map: 'Kalahari',
-                prizePool: 10000,
-                entryFee: 200,
-                maxPlayers: 80,
-                currentPlayers: 15,
-                status: 'upcoming',
-                roomId: '345678',
-                roomPass: 'mega456'
-            }
-        ];
 
-        const samplePlayers = [
-            {
-                id: 'player1',
-                name: 'Rohan Sharma',
-                ffUID: '987654321',
-                email: 'rohan@example.com',
-                walletBalance: 500,
-                tournamentsJoined: 12,
-                referralSource: 'FF2025REF',
-                status: 'active',
-                joinedDate: '2025-01-01'
-            },
-            {
-                id: 'player2',
-                name: 'Priya Singh',
-                ffUID: '123456789',
-                email: 'priya@example.com',
-                walletBalance: 750,
-                tournamentsJoined: 8,
-                referralSource: 'direct',
-                status: 'active',
-                joinedDate: '2025-01-05'
-            },
-            {
-                id: 'player3',
-                name: 'Amit Kumar',
-                ffUID: '555666777',
-                email: 'amit@example.com',
-                walletBalance: 1200,
-                tournamentsJoined: 25,
-                referralSource: 'FF2025ABC',
-                status: 'active',
-                joinedDate: '2024-12-15'
-            }
-        ];
 
         // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
@@ -1490,7 +1413,7 @@
                 loadRealData();
             } catch (error) {
                 console.error('Data loading failed:', error);
-                loadMockData();
+                handleDatabaseError();
             }
             
             initializeCharts();
@@ -1684,122 +1607,16 @@
             }
         }
 
-        function loadMockData() {
-            console.log('Loading mock data for offline mode...');
-            updateConnectionStatus('offline', 'Offline Mode');
+        function handleDatabaseError() {
+            console.log('Database connection failed - no data available');
+            updateConnectionStatus('offline', 'Database Error');
             
-            // Mock tournaments data
-            tournaments = [
-                {
-                    id: 'mock_tournament_1',
-                    name: 'Free Fire Championship',
-                    type: 'Battle Royale',
-                    entryFee: 50,
-                    prizePool: 2000,
-                    maxPlayers: 100,
-                    currentPlayers: 75,
-                    status: 'upcoming',
-                    startTime: new Date(Date.now() + 3600000).toISOString(),
-                    mapType: 'Bermuda',
-                    gameMode: 'Classic'
-                },
-                {
-                    id: 'mock_tournament_2',
-                    name: 'Solo vs Squad',
-                    type: 'Solo',
-                    entryFee: 25,
-                    prizePool: 1000,
-                    maxPlayers: 50,
-                    currentPlayers: 32,
-                    status: 'active',
-                    startTime: new Date(Date.now() - 1800000).toISOString(),
-                    mapType: 'Purgatory',
-                    gameMode: 'Clash Squad'
-                },
-                {
-                    id: 'mock_tournament_3',
-                    name: 'Weekly Challenge',
-                    type: 'Squad',
-                    entryFee: 100,
-                    prizePool: 5000,
-                    maxPlayers: 80,
-                    currentPlayers: 80,
-                    status: 'completed',
-                    startTime: new Date(Date.now() - 7200000).toISOString(),
-                    mapType: 'Kalahari',
-                    gameMode: 'Battle Royale'
-                }
-            ];
-
-            // Mock players data
-            players = [
-                {
-                    id: 'mock_player_1',
-                    name: 'ProGamer123',
-                    email: 'player1@example.com',
-                    phone: '+91 9876543210',
-                    ffUID: 'FF123456789',
-                    walletBalance: 150,
-                    totalWinnings: 500,
-                    tournamentsPlayed: 15,
-                    status: 'active',
-                    joinedDate: '2024-12-01',
-                    lastActive: new Date().toISOString()
-                },
-                {
-                    id: 'mock_player_2',
-                    name: 'FireMaster',
-                    email: 'player2@example.com',
-                    phone: '+91 9876543211',
-                    ffUID: 'FF987654321',
-                    walletBalance: 75,
-                    totalWinnings: 250,
-                    tournamentsPlayed: 8,
-                    status: 'active',
-                    joinedDate: '2024-12-10',
-                    lastActive: new Date(Date.now() - 3600000).toISOString()
-                },
-                {
-                    id: 'mock_player_3',
-                    name: 'SquadLeader',
-                    email: 'player3@example.com',
-                    phone: '+91 9876543212',
-                    ffUID: 'FF456789123',
-                    walletBalance: 200,
-                    totalWinnings: 750,
-                    tournamentsPlayed: 22,
-                    status: 'active',
-                    joinedDate: '2024-11-25',
-                    lastActive: new Date(Date.now() - 1800000).toISOString()
-                }
-            ];
-
-            // Mock topup requests
-            topupRequests = [
-                {
-                    id: 'mock_topup_1',
-                    userId: 'mock_player_1',
-                    userName: 'ProGamer123',
-                    amount: 100,
-                    status: 'pending',
-                    paymentMethod: 'UPI',
-                    transactionId: 'TXN123456789',
-                    requestDate: new Date(Date.now() - 1800000).toISOString()
-                },
-                {
-                    id: 'mock_topup_2',
-                    userId: 'mock_player_2',
-                    userName: 'FireMaster',
-                    amount: 50,
-                    status: 'approved',
-                    paymentMethod: 'UPI',
-                    transactionId: 'TXN987654321',
-                    requestDate: new Date(Date.now() - 3600000).toISOString(),
-                    approvedDate: new Date(Date.now() - 1800000).toISOString()
-                }
-            ];
-
-            // Mock system settings
+            // Clear all data arrays
+            tournaments = [];
+            players = [];
+            topupRequests = [];
+            
+            // Set minimal system settings
             window.systemSettings = {
                 signupBonus: 25,
                 referralBonus: 50,
@@ -1817,13 +1634,14 @@
                 referralCommission: 5
             };
 
-            console.log('Mock data loaded successfully');
-            showNotification('Running in offline mode with sample data', 'info');
+            showNotification('Database connection failed. Please check your internet connection.', 'error');
             
-            // Update the display with mock data
+            // Update the display with empty data
             loadDashboard();
             loadTournaments();
             loadPlayers();
+            loadTopupRequests();
+            loadSystemSettings();
         }
 
         async function createHardcodedAdminSession() {
@@ -1953,12 +1771,7 @@
 
             } catch (error) {
                 console.error('Error loading real data:', error);
-                showNotification('Database connection failed. Loading offline data...', 'warning');
-                updateConnectionStatus('offline', 'Connection Failed');
-                
-                // Load mock data as fallback
-                loadMockData();
-                loadTopupRequests();
+                handleDatabaseError();
             }
         }
 

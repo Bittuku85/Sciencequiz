@@ -1142,48 +1142,29 @@
         let tournaments = [];
         let userRegistrations = [];
 
-        // Sample Data
-        const sampleTournaments = [
-            {
-                id: 'tour1',
-                title: 'Elite Championship',
-                matchTime: '2025-01-15T18:00:00',
-                map: 'Bermuda',
-                prize: 5000,
-                entryFee: 100,
-                roomId: '123456',
-                roomPass: 'elite123',
-                maxPlayers: 50,
-                currentPlayers: 42,
-                status: 'live'
-            },
-            {
-                id: 'tour2', 
-                title: 'Weekend Warriors',
-                matchTime: '2025-01-16T20:00:00',
-                map: 'Purgatory',
-                prize: 2500,
-                entryFee: 50,
-                roomId: '789012',
-                roomPass: 'week789',
-                maxPlayers: 100,
-                currentPlayers: 67,
-                status: 'upcoming'
-            },
-            {
-                id: 'tour3',
-                title: 'Mega Battle',
-                matchTime: '2025-01-17T19:30:00',
-                map: 'Kalahari',
-                prize: 10000,
-                entryFee: 200,
-                roomId: '345678',
-                roomPass: 'mega456',
-                maxPlayers: 80,
-                currentPlayers: 15,
-                status: 'upcoming'
+
+
+        // Load tournaments from database
+        async function loadTournamentsFromDB() {
+            try {
+                console.log('Loading tournaments from database...');
+                const tournamentsSnapshot = await db.collection('tournaments').get();
+                tournaments = tournamentsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log(`Loaded ${tournaments.length} tournaments`);
+                loadTournaments(); // Update the display
+                loadAllTournaments(); // Update all tournaments display
+                showNotification('Tournaments loaded successfully!', 'success');
+            } catch (error) {
+                console.error('Error loading tournaments:', error);
+                tournaments = [];
+                loadTournaments(); // Update the display with empty array
+                loadAllTournaments(); // Update all tournaments display with empty array
+                showNotification('Could not load tournaments. Please check your internet connection.', 'error');
             }
-        ];
+        }
 
         // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
@@ -1191,7 +1172,11 @@
         });
 
         function initializeApp() {
-            tournaments = sampleTournaments;
+            // Initialize empty tournaments array
+            tournaments = [];
+            
+            // Load real tournament data from database
+            loadTournamentsFromDB();
             
             // Check if user is logged in
             auth.onAuthStateChanged(user => {
