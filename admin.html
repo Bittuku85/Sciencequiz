@@ -1771,6 +1771,17 @@
 
             } catch (error) {
                 console.error('Error loading real data:', error);
+                
+                if (error.code === 'permission-denied') {
+                    showNotification('Permission denied. Please check your admin privileges.', 'error');
+                    updateConnectionStatus('offline', 'Permission Denied');
+                } else if (error.code === 'unavailable') {
+                    showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                    updateConnectionStatus('offline', 'Service Unavailable');
+                } else {
+                    updateConnectionStatus('offline', 'Connection Failed');
+                }
+                
                 handleDatabaseError();
             }
         }

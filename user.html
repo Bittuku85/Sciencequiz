@@ -1162,7 +1162,20 @@
                 tournaments = [];
                 loadTournaments(); // Update the display with empty array
                 loadAllTournaments(); // Update all tournaments display with empty array
-                showNotification('Could not load tournaments. Please check your internet connection.', 'error');
+                
+                if (error.code === 'permission-denied') {
+                    console.log('Permission denied - this is normal if Firestore rules are restrictive');
+                    showNotification('Please login to view tournaments.', 'warning');
+                    
+                    // Don't force guest interface if user is already logged in
+                    if (!firebase.auth().currentUser) {
+                        showGuestInterface();
+                    }
+                } else if (error.code === 'unavailable') {
+                    showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                } else {
+                    showNotification('Could not load tournaments. Please check your internet connection.', 'error');
+                }
             }
         }
 
@@ -1270,7 +1283,15 @@
                 updateWalletDisplay();
             } catch (error) {
                 console.error('Error loading user data:', error);
-                showNotification('Error loading user data. Please check your connection.', 'error');
+                
+                if (error.code === 'permission-denied') {
+                    showNotification('Permission denied. Database access restricted.', 'error');
+                    console.log('User not properly authenticated or Firestore rules are restrictive');
+                } else if (error.code === 'unavailable') {
+                    showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                } else {
+                    showNotification('Error loading user data. Please check your connection.', 'error');
+                }
                 
                 // Fallback: use basic auth info
                 currentUser = {
