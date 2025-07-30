@@ -762,6 +762,10 @@
                  <i class="fas fa-cog"></i>
                  Settings
              </button>
+             <button class="nav-item" onclick="adminLogout()" style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                 <i class="fas fa-sign-out-alt"></i>
+                 Logout
+             </button>
         </div>
     </nav>
 
@@ -1439,7 +1443,27 @@
         });
 
                          function initializeApp() {
-            // Check admin authentication
+            // Check for stored admin session first
+            const storedAdmin = localStorage.getItem('adminSession');
+            if (storedAdmin) {
+                try {
+                    window.currentAdmin = JSON.parse(storedAdmin);
+                    showAdminInterface();
+                    loadRealData();
+                    initializeCharts();
+                    showNotification('Welcome back, ' + window.currentAdmin.displayName + '!', 'success');
+                    
+                    // Update stats periodically
+                    setInterval(updateRealTimeStats, 5000);
+                    setInterval(syncRealData, 10000);
+                    return;
+                } catch (error) {
+                    console.error('Error loading stored admin session:', error);
+                    localStorage.removeItem('adminSession');
+                }
+            }
+
+            // Check Firebase authentication
             auth.onAuthStateChanged(user => {
                 if (user) {
                     // Check if user is admin
@@ -1528,11 +1552,11 @@
                         <form id="adminLoginForm">
                             <div style="margin-bottom: 1rem;">
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Admin Email</label>
-                                <input type="email" id="adminEmail" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" required>
+                                <input type="email" id="adminEmail" value="Rprasada273@gmail.com" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" required>
                             </div>
                             <div style="margin-bottom: 1.5rem;">
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Password</label>
-                                <input type="password" id="adminPassword" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" required>
+                                <input type="password" id="adminPassword" value="59029400" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" required>
                             </div>
                             <button type="button" onclick="adminLogin()" style="width: 100%; padding: 1rem; background: var(--accent-blue); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
                                 <span id="adminLoginText">Login as Admin</span>
@@ -1559,12 +1583,76 @@
             loginLoader.style.display = 'inline-block';
 
             try {
+                // Check for hardcoded admin credentials first
+                if (email === 'Rprasada273@gmail.com' && password === '59029400') {
+                    // Create a mock user session for hardcoded admin
+                    await createHardcodedAdminSession();
+                    showAdminInterface();
+                    loadRealData();
+                    showNotification('Admin login successful!', 'success');
+                    return;
+                }
+
+                // Try Firebase authentication for other users
                 await auth.signInWithEmailAndPassword(email, password);
             } catch (error) {
                 console.error('Admin login error:', error);
-                alert('Login failed: ' + error.message);
+                let errorMessage = 'Login failed';
+                
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'No account found with this email';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Incorrect password';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Please enter a valid email address';
+                        break;
+                    case 'auth/network-request-failed':
+                        errorMessage = 'Network error. Please check your connection';
+                        break;
+                    default:
+                        errorMessage = error.message || errorMessage;
+                }
+                
+                alert(errorMessage);
                 loginText.style.display = 'inline';
                 loginLoader.style.display = 'none';
+            }
+        }
+
+        async function createHardcodedAdminSession() {
+            // Create a mock admin session for the hardcoded credentials
+            window.currentAdmin = {
+                uid: 'hardcoded_admin_001',
+                email: 'Rprasada273@gmail.com',
+                displayName: 'Admin User',
+                role: 'super_admin',
+                permissions: getDefaultPermissions('super_admin')
+            };
+
+            // Store admin data locally for this session
+            localStorage.setItem('adminSession', JSON.stringify(window.currentAdmin));
+            
+            // Also create the admin record in Firestore if it doesn't exist
+            try {
+                const adminRef = db.collection('admins').doc('hardcoded_admin_001');
+                const adminDoc = await adminRef.get();
+                
+                if (!adminDoc.exists) {
+                    await adminRef.set({
+                        name: 'Admin User',
+                        email: 'Rprasada273@gmail.com',
+                        role: 'super_admin',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        isActive: true,
+                        isHardcoded: true,
+                        permissions: getDefaultPermissions('super_admin')
+                    });
+                }
+            } catch (error) {
+                console.log('Note: Could not create admin record in database (offline mode)');
             }
         }
 
@@ -2575,6 +2663,21 @@
             };
             
             return permissions[role] || permissions.moderator;
+        }
+
+        function adminLogout() {
+            // Clear stored admin session
+            localStorage.removeItem('adminSession');
+            window.currentAdmin = null;
+            
+            // Sign out from Firebase if signed in
+            if (auth.currentUser) {
+                auth.signOut();
+            }
+            
+            // Redirect to login
+            showAdminLogin();
+            showNotification('Logged out successfully', 'success');
         }
 
         // Action Functions
