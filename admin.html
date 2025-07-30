@@ -1115,27 +1115,43 @@
                         </div>
                     </div>
 
-                    <div class="settings-card">
-                        <h3 class="settings-title">Referral Settings</h3>
-                        <form id="referralSettingsForm">
-                            <div class="form-group">
-                                <label class="form-label">Referral Bonus Amount (₹)</label>
-                                <input type="number" class="form-input" id="referralBonus" value="50" min="1" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Minimum Withdrawal Amount (₹)</label>
-                                <input type="number" class="form-input" id="minWithdrawal" value="100" min="1" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Referral Code Prefix</label>
-                                <input type="text" class="form-input" id="referralPrefix" value="FF2025" required>
-                            </div>
-                            <button type="submit" class="action-btn btn-primary">
-                                <i class="fas fa-save"></i>
-                                Save Referral Settings
-                            </button>
-                        </form>
-                    </div>
+                                         <div class="settings-card">
+                         <h3 class="settings-title">Bonus & Referral Settings</h3>
+                         <form id="bonusSettingsForm">
+                             <div class="form-group">
+                                 <label class="form-label">Signup Bonus (₹)</label>
+                                 <input type="number" class="form-input" id="signupBonus" value="25" min="0" required>
+                                 <small style="color: #64748B; font-size: 0.8rem;">Bonus given to new users on registration</small>
+                             </div>
+                             <div class="form-group">
+                                 <label class="form-label">Referral Bonus for Referrer (₹)</label>
+                                 <input type="number" class="form-input" id="referralBonus" value="50" min="0" required>
+                                 <small style="color: #64748B; font-size: 0.8rem;">Bonus given to user who refers</small>
+                             </div>
+                             <div class="form-group">
+                                 <label class="form-label">Referral Bonus for New User (₹)</label>
+                                 <input type="number" class="form-input" id="newUserReferralBonus" value="25" min="0" required>
+                                 <small style="color: #64748B; font-size: 0.8rem;">Extra bonus for new user using referral code</small>
+                             </div>
+                             <div class="form-group">
+                                 <label class="form-label">Minimum Topup Amount (₹)</label>
+                                 <input type="number" class="form-input" id="minTopup" value="50" min="1" required>
+                             </div>
+                             <div class="form-group">
+                                 <label class="form-label">Maximum Topup Amount (₹)</label>
+                                 <input type="number" class="form-input" id="maxTopup" value="50000" min="100" required>
+                             </div>
+                             <div class="form-group">
+                                 <label class="form-label">Referral Code Prefix</label>
+                                 <input type="text" class="form-input" id="referralPrefix" value="FF2025" required>
+                                 <small style="color: #64748B; font-size: 0.8rem;">Prefix for auto-generated referral codes</small>
+                             </div>
+                             <button type="submit" class="action-btn btn-primary">
+                                 <i class="fas fa-save"></i>
+                                 Save Bonus Settings
+                             </button>
+                         </form>
+                     </div>
 
                     <div class="settings-card">
                         <h3 class="settings-title">Admin Users & Roles</h3>
@@ -1420,25 +1436,181 @@
             initializeApp();
         });
 
-                 function initializeApp() {
-             tournaments = sampleTournaments;
-             players = samplePlayers;
-             
-             // Initialize topup requests from user.html
-             if (window.pendingTopups) {
-                 topupRequests = window.pendingTopups;
-             }
-             
-             loadDashboard();
-             loadTournaments();
-             loadPlayers();
-             loadTopupRequests();
-             initializeCharts();
-             
-             // Update stats periodically
-             setInterval(updateRealTimeStats, 5000);
-             setInterval(syncTopupRequests, 10000); // Check for new topup requests every 10 seconds
-         }
+                         function initializeApp() {
+            // Check admin authentication
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // Check if user is admin
+                    checkAdminAccess(user);
+                } else {
+                    // Redirect to login
+                    showAdminLogin();
+                }
+            });
+            
+            loadRealData();
+            initializeCharts();
+            
+            // Update stats periodically
+            setInterval(updateRealTimeStats, 5000);
+            setInterval(syncRealData, 10000); // Sync real data every 10 seconds
+        }
+
+        async function checkAdminAccess(user) {
+            try {
+                const adminDoc = await db.collection('admins').doc(user.uid).get();
+                if (adminDoc.exists) {
+                    // User is admin
+                    showAdminInterface();
+                    loadRealData();
+                } else {
+                    // User is not admin
+                    showNotification('Access denied. Admin privileges required.', 'error');
+                    auth.signOut();
+                }
+            } catch (error) {
+                console.error('Error checking admin access:', error);
+                showNotification('Error verifying admin access', 'error');
+            }
+        }
+
+        function showAdminInterface() {
+            document.body.style.display = 'block';
+        }
+
+        function showAdminLogin() {
+            document.body.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-primary);">
+                    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: var(--shadow-medium); max-width: 400px; width: 100%;">
+                        <h2 style="text-align: center; margin-bottom: 2rem; font-family: 'Russo One', sans-serif;">Admin Login</h2>
+                        <form id="adminLoginForm">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Admin Email</label>
+                                <input type="email" id="adminEmail" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" required>
+                            </div>
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Password</label>
+                                <input type="password" id="adminPassword" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" required>
+                            </div>
+                            <button type="button" onclick="adminLogin()" style="width: 100%; padding: 1rem; background: var(--accent-blue); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                                <span id="adminLoginText">Login as Admin</span>
+                                <span id="adminLoginLoader" class="loading" style="display: none;"></span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function adminLogin() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+
+            if (!email || !password) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            const loginText = document.getElementById('adminLoginText');
+            const loginLoader = document.getElementById('adminLoginLoader');
+            loginText.style.display = 'none';
+            loginLoader.style.display = 'inline-block';
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                console.error('Admin login error:', error);
+                alert('Login failed: ' + error.message);
+                loginText.style.display = 'inline';
+                loginLoader.style.display = 'none';
+            }
+        }
+
+        async function loadRealData() {
+            try {
+                // Load real tournaments
+                const tournamentsSnapshot = await db.collection('tournaments').get();
+                tournaments = tournamentsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                // Load real users
+                const usersSnapshot = await db.collection('users').get();
+                players = usersSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                // Load real topup requests
+                const topupsSnapshot = await db.collection('topupRequests').get();
+                topupRequests = topupsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                // Load system settings
+                const settingsDoc = await db.collection('settings').doc('system').get();
+                if (settingsDoc.exists) {
+                    window.systemSettings = settingsDoc.data();
+                } else {
+                    window.systemSettings = {
+                        signupBonus: 25,
+                        referralBonus: 50,
+                        newUserReferralBonus: 25,
+                        minTopup: 50,
+                        maxTopup: 50000
+                    };
+                }
+
+                // Update UI
+                loadDashboard();
+                loadTournaments();
+                loadPlayers();
+                loadTopupRequests();
+                loadSystemSettings();
+
+            } catch (error) {
+                console.error('Error loading real data:', error);
+                showNotification('Error loading data from database', 'error');
+                
+                // Fallback to sample data
+                tournaments = sampleTournaments;
+                players = samplePlayers;
+                topupRequests = [];
+                
+                loadDashboard();
+                loadTournaments();
+                loadPlayers();
+                loadTopupRequests();
+            }
+        }
+
+        async function syncRealData() {
+            try {
+                // Sync topup requests in real-time
+                const topupsSnapshot = await db.collection('topupRequests').where('status', '==', 'pending').get();
+                const pendingTopups = topupsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                // Check for new topup requests
+                const newRequests = pendingTopups.filter(req => 
+                    !topupRequests.some(existing => existing.id === req.id)
+                );
+
+                if (newRequests.length > 0) {
+                    topupRequests = [...topupRequests, ...newRequests];
+                    if (currentSection === 'topups') {
+                        loadTopupRequests();
+                    }
+                    showNotification(`${newRequests.length} new topup request(s) received!`, 'warning');
+                }
+            } catch (error) {
+                console.error('Error syncing real data:', error);
+            }
+        }
 
         // Navigation Functions
         function toggleSidebar() {
@@ -1842,49 +2014,87 @@
              showNotification('Topup requests refreshed!', 'success');
          }
 
-         function approveTopup(requestId) {
-             const request = topupRequests.find(r => r.id === requestId);
-             if (!request) return;
+                 async function approveTopup(requestId) {
+            const request = topupRequests.find(r => r.id === requestId);
+            if (!request) return;
 
-             if (confirm(`Approve topup of ₹${request.amount} for ${request.userName}?\nTransaction ID: ${request.orderId}`)) {
-                 request.status = 'approved';
-                 request.approvedAt = new Date();
-                 
-                 // Update user balance (simulate updating user data)
-                 updateUserBalance(request.userId, request.amount);
-                 
-                 loadTopupRequests();
-                 showNotification(`Topup approved! ₹${request.amount} added to ${request.userName}'s wallet.`, 'success');
-             }
-         }
+            if (confirm(`Approve topup of ₹${request.amount} for ${request.userName}?\nTransaction ID: ${request.orderId}`)) {
+                try {
+                    // Update topup request in Firestore
+                    await db.collection('topupRequests').doc(requestId).update({
+                        status: 'approved',
+                        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        approvedBy: auth.currentUser.uid
+                    });
 
-         function rejectTopup(requestId) {
-             const request = topupRequests.find(r => r.id === requestId);
-             if (!request) return;
+                    // Update user balance
+                    await updateUserBalance(request.userId, request.amount);
 
-             const reason = prompt(`Reject topup for ${request.userName}?\nEnter reason (optional):`);
-             if (reason !== null) {
-                 request.status = 'rejected';
-                 request.rejectedAt = new Date();
-                 request.rejectionReason = reason;
-                 
-                 loadTopupRequests();
-                 showNotification(`Topup rejected for ${request.userName}.`, 'warning');
-             }
-         }
+                    // Update local data
+                    request.status = 'approved';
+                    request.approvedAt = new Date();
+                    
+                    loadTopupRequests();
+                    showNotification(`Topup approved! ₹${request.amount} added to ${request.userName}'s wallet.`, 'success');
+                } catch (error) {
+                    console.error('Error approving topup:', error);
+                    showNotification('Error approving topup request', 'error');
+                }
+            }
+        }
 
-         function updateUserBalance(userId, amount) {
-             // In real implementation, update user balance in Firebase
-             // For demo, update in sample data if user exists
-             const player = players.find(p => p.id === userId);
-             if (player) {
-                 player.walletBalance += amount;
-                 if (currentSection === 'players') {
-                     loadPlayers();
-                 }
-             }
-             console.log(`Updated balance for user ${userId}: +₹${amount}`);
-         }
+        async function rejectTopup(requestId) {
+            const request = topupRequests.find(r => r.id === requestId);
+            if (!request) return;
+
+            const reason = prompt(`Reject topup for ${request.userName}?\nEnter reason (optional):`);
+            if (reason !== null) {
+                try {
+                    // Update topup request in Firestore
+                    await db.collection('topupRequests').doc(requestId).update({
+                        status: 'rejected',
+                        rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        rejectionReason: reason || 'No reason provided',
+                        rejectedBy: auth.currentUser.uid
+                    });
+
+                    // Update local data
+                    request.status = 'rejected';
+                    request.rejectedAt = new Date();
+                    request.rejectionReason = reason;
+                    
+                    loadTopupRequests();
+                    showNotification(`Topup rejected for ${request.userName}.`, 'warning');
+                } catch (error) {
+                    console.error('Error rejecting topup:', error);
+                    showNotification('Error rejecting topup request', 'error');
+                }
+            }
+        }
+
+                 async function updateUserBalance(userId, amount) {
+            try {
+                // Update user balance in Firestore
+                const userRef = db.collection('users').doc(userId);
+                await userRef.update({
+                    walletBalance: firebase.firestore.FieldValue.increment(amount)
+                });
+
+                // Update local data
+                const player = players.find(p => p.id === userId);
+                if (player) {
+                    player.walletBalance += amount;
+                    if (currentSection === 'players') {
+                        loadPlayers();
+                    }
+                }
+
+                console.log(`Updated balance for user ${userId}: +₹${amount}`);
+            } catch (error) {
+                console.error('Error updating user balance:', error);
+                showNotification('Error updating user balance', 'error');
+            }
+        }
 
          function toggleTopupSelection(checkbox) {
              if (checkbox.checked) {
@@ -2112,10 +2322,44 @@
             showNotification('Payment settings saved successfully!', 'success');
         });
 
-        document.getElementById('referralSettingsForm').addEventListener('submit', function(e) {
+        document.getElementById('bonusSettingsForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            showNotification('Referral settings saved successfully!', 'success');
+            
+            try {
+                const settings = {
+                    signupBonus: parseInt(document.getElementById('signupBonus').value),
+                    referralBonus: parseInt(document.getElementById('referralBonus').value),
+                    newUserReferralBonus: parseInt(document.getElementById('newUserReferralBonus').value),
+                    minTopup: parseInt(document.getElementById('minTopup').value),
+                    maxTopup: parseInt(document.getElementById('maxTopup').value),
+                    referralPrefix: document.getElementById('referralPrefix').value,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: auth.currentUser.uid
+                };
+
+                // Save to Firestore
+                await db.collection('settings').doc('system').set(settings, { merge: true });
+                
+                // Update global settings
+                window.systemSettings = settings;
+                
+                showNotification('Bonus settings saved successfully!', 'success');
+            } catch (error) {
+                console.error('Error saving bonus settings:', error);
+                showNotification('Error saving bonus settings', 'error');
+            }
         });
+
+        function loadSystemSettings() {
+            if (window.systemSettings) {
+                document.getElementById('signupBonus').value = window.systemSettings.signupBonus || 25;
+                document.getElementById('referralBonus').value = window.systemSettings.referralBonus || 50;
+                document.getElementById('newUserReferralBonus').value = window.systemSettings.newUserReferralBonus || 25;
+                document.getElementById('minTopup').value = window.systemSettings.minTopup || 50;
+                document.getElementById('maxTopup').value = window.systemSettings.maxTopup || 50000;
+                document.getElementById('referralPrefix').value = window.systemSettings.referralPrefix || 'FF2025';
+            }
+        }
 
         document.getElementById('systemSettingsForm').addEventListener('submit', function(e) {
             e.preventDefault();
