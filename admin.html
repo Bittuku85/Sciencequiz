@@ -780,6 +780,10 @@
                 <h1 id="pageTitle" class="page-title">Dashboard</h1>
             </div>
             <div class="header-actions">
+                <div id="connectionStatus" class="connection-status" title="Database Connection Status" style="margin-right: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+                    <i class="fas fa-circle" id="connectionIcon" style="color: orange;"></i>
+                    <span id="connectionText">Connecting...</span>
+                </div>
                 <button class="notification-btn">
                     <i class="fas fa-bell"></i>
                     <span class="notification-badge">3</span>
@@ -1449,6 +1453,7 @@
                 try {
                     window.currentAdmin = JSON.parse(storedAdmin);
                     showAdminInterface();
+                    updateConnectionStatus('connecting', 'Loading...');
                     loadRealData();
                     initializeCharts();
                     showNotification('Welcome back, ' + window.currentAdmin.displayName + '!', 'success');
@@ -1464,22 +1469,41 @@
             }
 
             // Check Firebase authentication
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    // Check if user is admin
-                    checkAdminAccess(user);
-                } else {
-                    // Redirect to login
-                    showAdminLogin();
-                }
-            });
+            try {
+                auth.onAuthStateChanged(user => {
+                    if (user) {
+                        // Check if user is admin
+                        checkAdminAccess(user);
+                    } else {
+                        // Redirect to login
+                        showAdminLogin();
+                    }
+                });
+            } catch (error) {
+                console.error('Firebase Auth Error:', error);
+                showNotification('Authentication service unavailable. Using offline mode.', 'warning');
+                showAdminLogin();
+            }
             
-            loadRealData();
+            // Try to load data
+            try {
+                loadRealData();
+            } catch (error) {
+                console.error('Data loading failed:', error);
+                loadMockData();
+            }
+            
             initializeCharts();
             
             // Update stats periodically
             setInterval(updateRealTimeStats, 5000);
-            setInterval(syncRealData, 10000); // Sync real data every 10 seconds
+            setInterval(() => {
+                try {
+                    syncRealData();
+                } catch (error) {
+                    console.log('Sync failed, using offline mode');
+                }
+            }, 10000); // Sync real data every 10 seconds
         }
 
         async function checkAdminAccess(user) {
@@ -1622,6 +1646,186 @@
             }
         }
 
+        async function testDatabaseConnection() {
+            try {
+                console.log('Testing database connection...');
+                // Try to read from a simple collection with timeout
+                await Promise.race([
+                    db.collection('test').limit(1).get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 3000))
+                ]);
+                console.log('Database connection successful');
+                return true;
+            } catch (error) {
+                console.error('Database connection failed:', error);
+                throw error;
+            }
+        }
+
+        function updateConnectionStatus(status, message) {
+            const icon = document.getElementById('connectionIcon');
+            const text = document.getElementById('connectionText');
+            
+            if (icon && text) {
+                switch (status) {
+                    case 'online':
+                        icon.style.color = '#10B981'; // green
+                        text.textContent = message || 'Online';
+                        break;
+                    case 'offline':
+                        icon.style.color = '#DC2626'; // red
+                        text.textContent = message || 'Offline';
+                        break;
+                    case 'connecting':
+                        icon.style.color = '#F59E0B'; // orange
+                        text.textContent = message || 'Connecting...';
+                        break;
+                }
+            }
+        }
+
+        function loadMockData() {
+            console.log('Loading mock data for offline mode...');
+            updateConnectionStatus('offline', 'Offline Mode');
+            
+            // Mock tournaments data
+            tournaments = [
+                {
+                    id: 'mock_tournament_1',
+                    name: 'Free Fire Championship',
+                    type: 'Battle Royale',
+                    entryFee: 50,
+                    prizePool: 2000,
+                    maxPlayers: 100,
+                    currentPlayers: 75,
+                    status: 'upcoming',
+                    startTime: new Date(Date.now() + 3600000).toISOString(),
+                    mapType: 'Bermuda',
+                    gameMode: 'Classic'
+                },
+                {
+                    id: 'mock_tournament_2',
+                    name: 'Solo vs Squad',
+                    type: 'Solo',
+                    entryFee: 25,
+                    prizePool: 1000,
+                    maxPlayers: 50,
+                    currentPlayers: 32,
+                    status: 'active',
+                    startTime: new Date(Date.now() - 1800000).toISOString(),
+                    mapType: 'Purgatory',
+                    gameMode: 'Clash Squad'
+                },
+                {
+                    id: 'mock_tournament_3',
+                    name: 'Weekly Challenge',
+                    type: 'Squad',
+                    entryFee: 100,
+                    prizePool: 5000,
+                    maxPlayers: 80,
+                    currentPlayers: 80,
+                    status: 'completed',
+                    startTime: new Date(Date.now() - 7200000).toISOString(),
+                    mapType: 'Kalahari',
+                    gameMode: 'Battle Royale'
+                }
+            ];
+
+            // Mock players data
+            players = [
+                {
+                    id: 'mock_player_1',
+                    name: 'ProGamer123',
+                    email: 'player1@example.com',
+                    phone: '+91 9876543210',
+                    ffUID: 'FF123456789',
+                    walletBalance: 150,
+                    totalWinnings: 500,
+                    tournamentsPlayed: 15,
+                    status: 'active',
+                    joinedDate: '2024-12-01',
+                    lastActive: new Date().toISOString()
+                },
+                {
+                    id: 'mock_player_2',
+                    name: 'FireMaster',
+                    email: 'player2@example.com',
+                    phone: '+91 9876543211',
+                    ffUID: 'FF987654321',
+                    walletBalance: 75,
+                    totalWinnings: 250,
+                    tournamentsPlayed: 8,
+                    status: 'active',
+                    joinedDate: '2024-12-10',
+                    lastActive: new Date(Date.now() - 3600000).toISOString()
+                },
+                {
+                    id: 'mock_player_3',
+                    name: 'SquadLeader',
+                    email: 'player3@example.com',
+                    phone: '+91 9876543212',
+                    ffUID: 'FF456789123',
+                    walletBalance: 200,
+                    totalWinnings: 750,
+                    tournamentsPlayed: 22,
+                    status: 'active',
+                    joinedDate: '2024-11-25',
+                    lastActive: new Date(Date.now() - 1800000).toISOString()
+                }
+            ];
+
+            // Mock topup requests
+            topupRequests = [
+                {
+                    id: 'mock_topup_1',
+                    userId: 'mock_player_1',
+                    userName: 'ProGamer123',
+                    amount: 100,
+                    status: 'pending',
+                    paymentMethod: 'UPI',
+                    transactionId: 'TXN123456789',
+                    requestDate: new Date(Date.now() - 1800000).toISOString()
+                },
+                {
+                    id: 'mock_topup_2',
+                    userId: 'mock_player_2',
+                    userName: 'FireMaster',
+                    amount: 50,
+                    status: 'approved',
+                    paymentMethod: 'UPI',
+                    transactionId: 'TXN987654321',
+                    requestDate: new Date(Date.now() - 3600000).toISOString(),
+                    approvedDate: new Date(Date.now() - 1800000).toISOString()
+                }
+            ];
+
+            // Mock system settings
+            window.systemSettings = {
+                signupBonus: 25,
+                referralBonus: 50,
+                newUserReferralBonus: 25,
+                autoStartBuffer: 5,
+                maxPlayersPerTournament: 100,
+                minEntryFee: 10,
+                maxEntryFee: 500,
+                tournamentCooldown: 30,
+                withdrawalMinAmount: 100,
+                withdrawalProcessingTime: 24,
+                supportEmail: 'support@tournamentarena.com',
+                supportPhone: '+91 9999999999',
+                platformCommission: 10,
+                referralCommission: 5
+            };
+
+            console.log('Mock data loaded successfully');
+            showNotification('Running in offline mode with sample data', 'info');
+            
+            // Update the display with mock data
+            loadDashboard();
+            loadTournaments();
+            loadPlayers();
+        }
+
         async function createHardcodedAdminSession() {
             // Create a mock admin session for the hardcoded credentials
             window.currentAdmin = {
@@ -1658,29 +1862,65 @@
 
         async function loadRealData() {
             try {
-                // Load real tournaments
-                const tournamentsSnapshot = await db.collection('tournaments').get();
+                console.log('Loading data from database...');
+                showNotification('Loading data...', 'info');
+
+                // Check if Firebase is properly initialized
+                if (!firebase.apps.length) {
+                    console.error('Firebase not initialized');
+                    loadMockData();
+                    return;
+                }
+
+                // Test database connection first
+                await testDatabaseConnection();
+
+                // Load real tournaments with timeout
+                console.log('Loading tournaments...');
+                const tournamentsSnapshot = await Promise.race([
+                    db.collection('tournaments').get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                
                 tournaments = tournamentsSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
+                console.log(`Loaded ${tournaments.length} tournaments`);
 
-                // Load real users
-                const usersSnapshot = await db.collection('users').get();
+                // Load real users with timeout
+                console.log('Loading users...');
+                const usersSnapshot = await Promise.race([
+                    db.collection('users').get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                
                 players = usersSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
+                console.log(`Loaded ${players.length} users`);
 
-                // Load real topup requests
-                const topupsSnapshot = await db.collection('topupRequests').get();
+                // Load real topup requests with timeout
+                console.log('Loading topup requests...');
+                const topupsSnapshot = await Promise.race([
+                    db.collection('topupRequests').get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                
                 topupRequests = topupsSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
+                console.log(`Loaded ${topupRequests.length} topup requests`);
 
-                // Load system settings
-                const settingsDoc = await db.collection('settings').doc('system').get();
+                // Load system settings with timeout
+                console.log('Loading system settings...');
+                const settingsDoc = await Promise.race([
+                    db.collection('settings').doc('system').get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                
                 if (settingsDoc.exists) {
                     window.systemSettings = settingsDoc.data();
                 } else {
@@ -1700,18 +1940,24 @@
                 loadTopupRequests();
                 loadSystemSettings();
 
-            } catch (error) {
-                console.error('Error loading real data:', error);
-                showNotification('Error loading data from database', 'error');
-                
-                // Fallback to sample data
-                tournaments = sampleTournaments;
-                players = samplePlayers;
-                topupRequests = [];
-                
+                console.log('Data loaded successfully from database');
+                showNotification('Data loaded successfully!', 'success');
+                updateConnectionStatus('online', 'Connected');
+
+                // Update UI
                 loadDashboard();
                 loadTournaments();
                 loadPlayers();
+                loadTopupRequests();
+                loadSystemSettings();
+
+            } catch (error) {
+                console.error('Error loading real data:', error);
+                showNotification('Database connection failed. Loading offline data...', 'warning');
+                updateConnectionStatus('offline', 'Connection Failed');
+                
+                // Load mock data as fallback
+                loadMockData();
                 loadTopupRequests();
             }
         }
@@ -2696,12 +2942,20 @@
 
         function showNotification(message, type) {
             const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type} show`;
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+            if (notification) {
+                notification.textContent = message;
+                notification.className = `notification ${type} show`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            } else {
+                // Fallback for when notification element doesn't exist
+                console.log(`${type.toUpperCase()}: ${message}`);
+                if (type === 'error') {
+                    alert(`Error: ${message}`);
+                }
+            }
         }
 
         // Close modals when clicking outside
