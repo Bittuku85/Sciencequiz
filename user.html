@@ -1131,10 +1131,26 @@
             appId: "1:987654321098:web:abc123def456ghi789"
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        // Initialize Firebase with error handling
+        try {
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            const auth = firebase.auth();
+            
+            console.log('Firebase initialized successfully');
+            
+            // Test Firebase connection
+            setTimeout(() => {
+                if (firebaseConfig.apiKey === "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA") {
+                    console.warn('⚠️ WARNING: Using default Firebase config. Please update with your actual project settings.');
+                    showNotification('Using demo Firebase config. Check FIREBASE_SETUP.md for proper setup.', 'info');
+                }
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            showNotification('Firebase initialization failed. Running in demo mode.', 'error');
+        }
 
         // App State
         let currentUser = null;
@@ -1164,13 +1180,42 @@
                 loadAllTournaments(); // Update all tournaments display with empty array
                 
                 if (error.code === 'permission-denied') {
-                    console.log('Permission denied - this is normal if Firestore rules are restrictive');
-                    showNotification('Please login to view tournaments.', 'warning');
+                    console.log('Permission denied - Loading demo tournaments for testing');
                     
-                    // Don't force guest interface if user is already logged in
-                    if (!firebase.auth().currentUser) {
-                        showGuestInterface();
-                    }
+                    // Load demo tournaments for testing
+                    tournaments = [
+                        {
+                            id: 'demo_tour_1',
+                            title: 'Free Fire Championship - DEMO',
+                            matchTime: new Date(Date.now() + 3600000).toISOString(),
+                            map: 'Bermuda',
+                            prize: 5000,
+                            entryFee: 100,
+                            roomId: 'DEMO123',
+                            roomPass: 'demo123',
+                            maxPlayers: 50,
+                            currentPlayers: 25,
+                            status: 'upcoming'
+                        },
+                        {
+                            id: 'demo_tour_2',
+                            title: 'Solo Challenge - DEMO',
+                            matchTime: new Date(Date.now() + 7200000).toISOString(),
+                            map: 'Purgatory',
+                            prize: 2500,
+                            entryFee: 50,
+                            roomId: 'DEMO456',
+                            roomPass: 'demo456',
+                            maxPlayers: 100,
+                            currentPlayers: 67,
+                            status: 'upcoming'
+                        }
+                    ];
+                    
+                    loadTournaments();
+                    loadAllTournaments();
+                    showNotification('Running in DEMO mode - Check FIREBASE_SETUP.md for proper setup.', 'warning');
+                    
                 } else if (error.code === 'unavailable') {
                     showNotification('Database temporarily unavailable. Please try again later.', 'error');
                 } else {
@@ -1285,23 +1330,49 @@
                 console.error('Error loading user data:', error);
                 
                 if (error.code === 'permission-denied') {
-                    showNotification('Permission denied. Database access restricted.', 'error');
-                    console.log('User not properly authenticated or Firestore rules are restrictive');
+                    console.log('Permission denied - Creating demo user profile');
+                    showNotification('Running in DEMO mode - user data simulated.', 'warning');
+                    
+                    // Create demo user profile
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 100, // Demo balance
+                        referralCode: 'DEMO' + user.uid.substr(-4).toUpperCase(),
+                        referralEarnings: 25,
+                        tournamentsJoined: 3,
+                        totalWinnings: 150,
+                        status: 'active'
+                    };
+                    
                 } else if (error.code === 'unavailable') {
                     showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                    
+                    // Fallback user
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 0,
+                        referralCode: 'N/A',
+                        referralEarnings: 0
+                    };
+                    
                 } else {
                     showNotification('Error loading user data. Please check your connection.', 'error');
+                    
+                    // Fallback user
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || user.email.split('@')[0],
+                        walletBalance: 0,
+                        referralCode: 'N/A',
+                        referralEarnings: 0
+                    };
                 }
                 
-                // Fallback: use basic auth info
-                currentUser = {
-                    uid: user.uid,
-                    email: user.email,
-                    name: user.displayName || user.email.split('@')[0],
-                    walletBalance: 0,
-                    referralCode: 'N/A',
-                    referralEarnings: 0
-                };
                 updateWalletDisplay();
             }
         }
