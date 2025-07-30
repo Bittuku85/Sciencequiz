@@ -1328,13 +1328,15 @@
 
     <script>
         // Firebase Configuration
+        // TODO: Replace with your actual Firebase project configuration
+        // Get these values from Firebase Console > Project Settings > General > Your apps
         const firebaseConfig = {
-            apiKey: "your-api-key",
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "your-app-id"
+            apiKey: "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA",
+            authDomain: "tournament-arena-app.firebaseapp.com",
+            projectId: "tournament-arena-app",
+            storageBucket: "tournament-arena-app.appspot.com",
+            messagingSenderId: "987654321098",
+            appId: "1:987654321098:web:abc123def456ghi789"
         };
 
         // Initialize Firebase
@@ -1464,13 +1466,53 @@
                     showAdminInterface();
                     loadRealData();
                 } else {
-                    // User is not admin
-                    showNotification('Access denied. Admin privileges required.', 'error');
-                    auth.signOut();
+                    // Check if this is the first admin (no admins exist)
+                    const adminsSnapshot = await db.collection('admins').limit(1).get();
+                    if (adminsSnapshot.empty) {
+                        // No admins exist, create the first admin
+                        await createFirstAdmin(user);
+                        showAdminInterface();
+                        loadRealData();
+                    } else {
+                        // User is not admin and other admins exist
+                        showNotification('Access denied. Admin privileges required.', 'error');
+                        auth.signOut();
+                    }
                 }
             } catch (error) {
                 console.error('Error checking admin access:', error);
                 showNotification('Error verifying admin access', 'error');
+            }
+        }
+
+        async function createFirstAdmin(user) {
+            try {
+                // Create the first admin account
+                await db.collection('admins').doc(user.uid).set({
+                    name: user.displayName || user.email,
+                    email: user.email,
+                    role: 'super_admin',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isActive: true,
+                    isFirstAdmin: true,
+                    permissions: getDefaultPermissions('super_admin')
+                });
+
+                // Also add to users collection
+                await db.collection('users').doc(user.uid).set({
+                    name: user.displayName || user.email,
+                    email: user.email,
+                    userType: 'admin',
+                    role: 'super_admin',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isActive: true
+                });
+
+                showNotification('Welcome! You are now the first admin of this system.', 'success');
+            } catch (error) {
+                console.error('Error creating first admin:', error);
+                showNotification('Error setting up first admin account', 'error');
+                throw error;
             }
         }
 
@@ -2371,7 +2413,168 @@
         }
 
         function addAdminUser() {
-            showNotification('Add admin user functionality would be implemented here', 'warning');
+            // Create a modal for admin registration
+            const modalHTML = `
+                <div id="addAdminModal" class="modal active">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <h3 class="modal-title">Add New Admin User</h3>
+                        <button class="close-btn" onclick="closeModal('addAdminModal')">&times;</button>
+                        <form id="addAdminForm">
+                            <div class="form-group">
+                                <label class="form-label">Admin Name</label>
+                                <input type="text" class="form-input" id="newAdminName" placeholder="Enter admin name" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Admin Email</label>
+                                <input type="email" class="form-input" id="newAdminEmail" placeholder="Enter admin email" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-input" id="newAdminPassword" placeholder="Enter password (min 6 characters)" required minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Admin Role</label>
+                                <select class="form-input" id="newAdminRole" required>
+                                    <option value="">Select Role</option>
+                                    <option value="super_admin">Super Admin</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="moderator">Moderator</option>
+                                </select>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="button" class="modal-btn btn-secondary" onclick="closeModal('addAdminModal')">Cancel</button>
+                                <button type="button" class="modal-btn btn-primary" onclick="createAdminAccount()">
+                                    <span id="createAdminText">Create Admin</span>
+                                    <span id="createAdminLoader" class="loading" style="display: none;"></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            // Add modal to the page
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        async function createAdminAccount() {
+            const name = document.getElementById('newAdminName').value.trim();
+            const email = document.getElementById('newAdminEmail').value.trim();
+            const password = document.getElementById('newAdminPassword').value;
+            const role = document.getElementById('newAdminRole').value;
+
+            // Validation
+            if (!name || !email || !password || !role) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            const createText = document.getElementById('createAdminText');
+            const createLoader = document.getElementById('createAdminLoader');
+            createText.style.display = 'none';
+            createLoader.style.display = 'inline-block';
+
+            try {
+                // Create the user account
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Update user profile
+                await user.updateProfile({
+                    displayName: name
+                });
+
+                // Add admin data to Firestore
+                await db.collection('admins').doc(user.uid).set({
+                    name: name,
+                    email: email,
+                    role: role,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isActive: true,
+                    permissions: getDefaultPermissions(role)
+                });
+
+                // Also add to users collection for general user data
+                await db.collection('users').doc(user.uid).set({
+                    name: name,
+                    email: email,
+                    userType: 'admin',
+                    role: role,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isActive: true
+                });
+
+                showNotification('Admin account created successfully!', 'success');
+                closeModal('addAdminModal');
+                
+                // Reset form
+                document.getElementById('addAdminForm').reset();
+                
+            } catch (error) {
+                console.error('Error creating admin account:', error);
+                let errorMessage = 'Failed to create admin account';
+                
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = 'This email is already registered';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Please enter a valid email address';
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = 'Password should be at least 6 characters';
+                        break;
+                    case 'auth/network-request-failed':
+                        errorMessage = 'Network error. Please check your connection';
+                        break;
+                    default:
+                        errorMessage = error.message || errorMessage;
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                createText.style.display = 'inline';
+                createLoader.style.display = 'none';
+            }
+        }
+
+        function getDefaultPermissions(role) {
+            const permissions = {
+                super_admin: {
+                    canManageAdmins: true,
+                    canManageTournaments: true,
+                    canManageUsers: true,
+                    canManagePayments: true,
+                    canViewAnalytics: true,
+                    canManageSettings: true,
+                    canSendNotifications: true
+                },
+                admin: {
+                    canManageAdmins: false,
+                    canManageTournaments: true,
+                    canManageUsers: true,
+                    canManagePayments: true,
+                    canViewAnalytics: true,
+                    canManageSettings: false,
+                    canSendNotifications: true
+                },
+                moderator: {
+                    canManageAdmins: false,
+                    canManageTournaments: false,
+                    canManageUsers: true,
+                    canManagePayments: false,
+                    canViewAnalytics: false,
+                    canManageSettings: false,
+                    canSendNotifications: false
+                }
+            };
+            
+            return permissions[role] || permissions.moderator;
         }
 
         // Action Functions
