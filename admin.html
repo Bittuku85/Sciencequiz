@@ -1350,8 +1350,8 @@
         // Initialize Firebase with error handling
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
             console.log('Firebase initialized successfully');
             
@@ -1384,6 +1384,10 @@
          let editingTournament = null;
          let topupRequests = [];
          let selectedTopups = [];
+         
+         // Firebase instances (global scope)
+         let db = null;
+         let auth = null;
 
 
 
@@ -1416,7 +1420,8 @@
 
             // Check Firebase authentication
             try {
-                auth.onAuthStateChanged(user => {
+                if (auth) {
+                    auth.onAuthStateChanged(user => {
                     if (user) {
                         // Check if user is admin
                         checkAdminAccess(user);
@@ -1425,6 +1430,10 @@
                         showAdminLogin();
                     }
                 });
+                } else {
+                    console.warn('Auth not available, showing admin login in demo mode');
+                    showAdminLogin();
+                }
             } catch (error) {
                 console.error('Firebase Auth Error:', error);
                 showNotification('Authentication service unavailable. Using offline mode.', 'warning');
@@ -1564,6 +1573,9 @@
                 }
 
                 // Try Firebase authentication for other users
+                if (!auth) {
+                    throw new Error('Authentication not available. Using demo mode.');
+                }
                 await auth.signInWithEmailAndPassword(email, password);
             } catch (error) {
                 console.error('Admin login error:', error);

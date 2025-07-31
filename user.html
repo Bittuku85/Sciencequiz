@@ -1134,8 +1134,8 @@
         // Initialize Firebase with error handling
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
             console.log('Firebase initialized successfully');
             
@@ -1163,6 +1163,10 @@
         let currentTournament = null;
         let tournaments = [];
         let userRegistrations = [];
+        
+        // Firebase instances (global scope)
+        let db = null;
+        let auth = null;
 
         // Tournament loading functions
         function loadDemoTournaments() {
@@ -1210,6 +1214,12 @@
         // Load tournaments from database
         async function loadTournamentsFromDB() {
             try {
+                if (!db) {
+                    console.warn('Database not initialized, falling back to demo mode');
+                    loadDemoTournaments();
+                    return;
+                }
+                
                 console.log('Loading tournaments from database...');
                 const tournamentsSnapshot = await db.collection('tournaments').get();
                 tournaments = tournamentsSnapshot.docs.map(doc => ({
@@ -1283,15 +1293,16 @@
             // Load real tournament data from database
             loadTournamentsFromDB();
             
-            // Enable Firebase Auth persistence
-            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
-                console.log('Auth persistence enabled');
-            }).catch((error) => {
-                console.error('Error enabling auth persistence:', error);
-            });
-            
-            // Check if user is logged in
-            auth.onAuthStateChanged(user => {
+            // Enable Firebase Auth persistence (only if auth is available)
+            if (auth) {
+                auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+                    console.log('Auth persistence enabled');
+                }).catch((error) => {
+                    console.error('Error enabling auth persistence:', error);
+                });
+                
+                // Check if user is logged in
+                auth.onAuthStateChanged(user => {
                 console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
                 if (user) {
                     // User is logged in
@@ -1304,6 +1315,10 @@
                     showGuestInterface();
                 }
             });
+            } else {
+                console.warn('Auth not available, running in demo mode');
+                showGuestInterface();
+            }
             
             loadTournaments();
         }
@@ -1323,16 +1338,16 @@
                     currentUser = {
                         uid: user.uid,
                         email: user.email,
-                        name: userData.name,
-                        phone: userData.phone,
-                        ffUID: userData.ffUID,
+                        name: userData.name || user.displayName || user.email.split('@')[0],
+                        phone: userData.phone || '',
+                        ffUID: userData.ffUID || '',
                         walletBalance: userData.walletBalance || 0,
-                        referralCode: userData.referralCode,
+                        referralCode: userData.referralCode || generateReferralCode(),
                         referralEarnings: userData.referralEarnings || 0,
                         joinedAt: userData.joinedAt
                     };
-                    console.log('User data loaded successfully:', currentUser.name);
-                    showNotification(`Welcome back, ${currentUser.name}!`, 'success');
+                    console.log('User data loaded successfully:', currentUser.name || 'Unknown User');
+                    showNotification(`Welcome back, ${currentUser.name || 'User'}!`, 'success');
                 } else {
                     console.log('User document does not exist, creating new one');
                     // Create user document if doesn't exist
@@ -1901,6 +1916,9 @@
             loginLoader.style.display = 'inline-block';
 
             try {
+                if (!auth) {
+                    throw new Error('Authentication not initialized. Running in demo mode.');
+                }
                 await auth.signInWithEmailAndPassword(email, password);
                 showNotification('Login successful!', 'success');
                 closeModal('loginModal');
@@ -1973,6 +1991,10 @@
             registerLoader.style.display = 'inline-block';
 
             try {
+                if (!auth) {
+                    throw new Error('Authentication not initialized. Running in demo mode.');
+                }
+                
                 // Create user account
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCredential.user;
