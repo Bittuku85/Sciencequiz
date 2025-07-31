@@ -1134,22 +1134,28 @@
         // Initialize Firebase with error handling
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
             console.log('Firebase initialized successfully');
             
-            // Test Firebase connection
+            // Test Firebase connection and enable offline mode for demo
             setTimeout(() => {
                 if (firebaseConfig.apiKey === "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA") {
-                    console.warn('⚠️ WARNING: Using default Firebase config. Please update with your actual project settings.');
-                    showNotification('Using demo Firebase config. Check FIREBASE_SETUP.md for proper setup.', 'info');
+                    console.warn('⚠️ WARNING: Using demo Firebase config. Running in DEMO MODE.');
+                    showNotification('Running in DEMO MODE - Create accounts and test features with sample data!', 'info');
+                    // Load demo tournaments immediately
+                    loadDemoTournaments();
+                } else {
+                    // Test real Firebase connection
+                    loadRealTournaments();
                 }
-            }, 2000);
+            }, 1000);
             
         } catch (error) {
             console.error('Firebase initialization failed:', error);
-            showNotification('Firebase initialization failed. Running in demo mode.', 'error');
+            showNotification('Firebase initialization failed. Running in demo mode with sample tournaments.', 'warning');
+            loadDemoTournaments(); // Load demo data as fallback
         }
 
         // App State
@@ -1157,12 +1163,63 @@
         let currentTournament = null;
         let tournaments = [];
         let userRegistrations = [];
+        
+        // Firebase instances (global scope)
+        let db = null;
+        let auth = null;
+
+        // Tournament loading functions
+        function loadDemoTournaments() {
+            console.log('Loading demo tournaments...');
+            tournaments = [
+                {
+                    id: 'demo_tour_1',
+                    title: 'Free Fire Championship - DEMO',
+                    matchTime: new Date(Date.now() + 3600000).toISOString(),
+                    map: 'Bermuda',
+                    prize: 5000,
+                    entryFee: 100,
+                    roomId: 'DEMO123',
+                    roomPass: 'demo123',
+                    maxPlayers: 50,
+                    currentPlayers: 25,
+                    status: 'upcoming'
+                },
+                {
+                    id: 'demo_tour_2',
+                    title: 'Solo Challenge - DEMO',
+                    matchTime: new Date(Date.now() + 7200000).toISOString(),
+                    map: 'Purgatory',
+                    prize: 2500,
+                    entryFee: 50,
+                    roomId: 'DEMO456',
+                    roomPass: 'demo456',
+                    maxPlayers: 100,
+                    currentPlayers: 67,
+                    status: 'upcoming'
+                }
+            ];
+            loadTournaments(); // Update the display
+            loadAllTournaments(); // Update all tournaments display
+            showNotification('Demo tournaments loaded! All features available for testing.', 'success');
+        }
+
+        function loadRealTournaments() {
+            console.log('Attempting to load real tournaments...');
+            loadTournamentsFromDB();
+        }
 
 
 
         // Load tournaments from database
         async function loadTournamentsFromDB() {
             try {
+                if (!db) {
+                    console.warn('Database not initialized, falling back to demo mode');
+                    loadDemoTournaments();
+                    return;
+                }
+                
                 console.log('Loading tournaments from database...');
                 const tournamentsSnapshot = await db.collection('tournaments').get();
                 tournaments = tournamentsSnapshot.docs.map(doc => ({
@@ -1236,15 +1293,16 @@
             // Load real tournament data from database
             loadTournamentsFromDB();
             
-            // Enable Firebase Auth persistence
-            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
-                console.log('Auth persistence enabled');
-            }).catch((error) => {
-                console.error('Error enabling auth persistence:', error);
-            });
-            
-            // Check if user is logged in
-            auth.onAuthStateChanged(user => {
+            // Enable Firebase Auth persistence (only if auth is available)
+            if (auth) {
+                auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+                    console.log('Auth persistence enabled');
+                }).catch((error) => {
+                    console.error('Error enabling auth persistence:', error);
+                });
+                
+                // Check if user is logged in
+                auth.onAuthStateChanged(user => {
                 console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
                 if (user) {
                     // User is logged in
@@ -1257,6 +1315,10 @@
                     showGuestInterface();
                 }
             });
+            } else {
+                console.warn('Auth not available, running in demo mode');
+                showGuestInterface();
+            }
             
             loadTournaments();
         }
@@ -1276,16 +1338,16 @@
                     currentUser = {
                         uid: user.uid,
                         email: user.email,
-                        name: userData.name,
-                        phone: userData.phone,
-                        ffUID: userData.ffUID,
+                        name: userData.name || user.displayName || user.email.split('@')[0],
+                        phone: userData.phone || '',
+                        ffUID: userData.ffUID || '',
                         walletBalance: userData.walletBalance || 0,
-                        referralCode: userData.referralCode,
+                        referralCode: userData.referralCode || generateReferralCode(),
                         referralEarnings: userData.referralEarnings || 0,
                         joinedAt: userData.joinedAt
                     };
-                    console.log('User data loaded successfully:', currentUser.name);
-                    showNotification(`Welcome back, ${currentUser.name}!`, 'success');
+                    console.log('User data loaded successfully:', currentUser.name || 'Unknown User');
+                    showNotification(`Welcome back, ${currentUser.name || 'User'}!`, 'success');
                 } else {
                     console.log('User document does not exist, creating new one');
                     // Create user document if doesn't exist
@@ -1854,6 +1916,9 @@
             loginLoader.style.display = 'inline-block';
 
             try {
+                if (!auth) {
+                    throw new Error('Authentication not initialized. Running in demo mode.');
+                }
                 await auth.signInWithEmailAndPassword(email, password);
                 showNotification('Login successful!', 'success');
                 closeModal('loginModal');
@@ -1926,6 +1991,10 @@
             registerLoader.style.display = 'inline-block';
 
             try {
+                if (!auth) {
+                    throw new Error('Authentication not initialized. Running in demo mode.');
+                }
+                
                 // Create user account
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCredential.user;

@@ -1350,22 +1350,29 @@
         // Initialize Firebase with error handling
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
             console.log('Firebase initialized successfully');
             
-            // Test Firebase connection
+            // Test Firebase connection and enable offline mode for demo
             setTimeout(() => {
                 if (firebaseConfig.apiKey === "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA") {
-                    console.warn('⚠️ WARNING: Using default Firebase config. Please update with your actual project settings.');
-                    showNotification('Using demo Firebase config. Update FIREBASE_SETUP.md for real project.', 'warning');
+                    console.warn('⚠️ WARNING: Using demo Firebase config. Running in DEMO MODE.');
+                    showNotification('Running in DEMO MODE - using sample data for testing. See FIREBASE_SETUP.md for real project setup.', 'info');
+                    updateConnectionStatus('offline', 'Demo Mode');
+                    handleDatabaseError(); // Load demo data immediately
+                } else {
+                    // Test real Firebase connection
+                    testDatabaseConnection();
                 }
-            }, 2000);
+            }, 1000);
             
         } catch (error) {
             console.error('Firebase initialization failed:', error);
-            showNotification('Firebase initialization failed. Running in offline mode.', 'error');
+            showNotification('Firebase initialization failed. Running in demo mode with sample data.', 'warning');
+            updateConnectionStatus('offline', 'Demo Mode');
+            handleDatabaseError(); // Load demo data as fallback
         }
 
                  // App State
@@ -1377,6 +1384,10 @@
          let editingTournament = null;
          let topupRequests = [];
          let selectedTopups = [];
+         
+         // Firebase instances (global scope)
+         let db = null;
+         let auth = null;
 
 
 
@@ -1409,7 +1420,8 @@
 
             // Check Firebase authentication
             try {
-                auth.onAuthStateChanged(user => {
+                if (auth) {
+                    auth.onAuthStateChanged(user => {
                     if (user) {
                         // Check if user is admin
                         checkAdminAccess(user);
@@ -1418,6 +1430,10 @@
                         showAdminLogin();
                     }
                 });
+                } else {
+                    console.warn('Auth not available, showing admin login in demo mode');
+                    showAdminLogin();
+                }
             } catch (error) {
                 console.error('Firebase Auth Error:', error);
                 showNotification('Authentication service unavailable. Using offline mode.', 'warning');
@@ -1557,6 +1573,9 @@
                 }
 
                 // Try Firebase authentication for other users
+                if (!auth) {
+                    throw new Error('Authentication not available. Using demo mode.');
+                }
                 await auth.signInWithEmailAndPassword(email, password);
             } catch (error) {
                 console.error('Admin login error:', error);
@@ -1588,15 +1607,37 @@
         async function testDatabaseConnection() {
             try {
                 console.log('Testing database connection...');
+                updateConnectionStatus('connecting', 'Testing Connection...');
+                
                 // Try to read from a simple collection with timeout
                 await Promise.race([
-                    db.collection('test').limit(1).get(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 3000))
+                    db.collection('tournaments').limit(1).get(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 5 seconds')), 5000))
                 ]);
+                
                 console.log('Database connection successful');
+                updateConnectionStatus('online', 'Connected');
+                showNotification('Successfully connected to Firebase!', 'success');
+                
+                // Load real data
+                loadRealData();
                 return true;
             } catch (error) {
                 console.error('Database connection failed:', error);
+                
+                if (error.code === 'permission-denied') {
+                    updateConnectionStatus('offline', 'Permission Denied');
+                    showNotification('Permission denied. Please check your Firebase security rules or use demo mode for testing.', 'warning');
+                } else if (error.message.includes('timeout')) {
+                    updateConnectionStatus('offline', 'Connection Timeout');
+                    showNotification('Connection timeout. Please check your internet connection.', 'error');
+                } else {
+                    updateConnectionStatus('offline', 'Connection Failed');
+                    showNotification('Database connection failed. Running in demo mode.', 'warning');
+                }
+                
+                // Fallback to demo mode
+                handleDatabaseError();
                 throw error;
             }
         }
