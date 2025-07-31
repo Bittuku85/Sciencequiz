@@ -766,6 +766,10 @@
                     <i class="fas fa-sync-alt"></i>
                     Fast Reload
                 </button>
+                <button class="nav-item" onclick="forceRealConnection()" style="margin-top: 0.5rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; color: white;">
+                    <i class="fas fa-database"></i>
+                    Force Real DB
+                </button>
                 <button class="nav-item" onclick="adminLogout()" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                  <i class="fas fa-sign-out-alt"></i>
                  Logout
@@ -1363,7 +1367,7 @@
             setTimeout(() => {
                 if (firebaseConfig.apiKey === "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA") {
                     console.warn('⚠️ WARNING: Using default Firebase config. Please update with your actual project settings.');
-                    showNotification('Using demo Firebase config. Update FIREBASE_SETUP.md for real project.', 'warning');
+                    showNotification('Using demo Firebase config but attempting real connection...', 'info');
                 }
             }, 2000);
             
@@ -1696,7 +1700,15 @@
                     // Create a mock user session for hardcoded admin
                     await createHardcodedAdminSession();
                     showAdminInterface();
-                    loadRealData();
+                    
+                    // Try to load real data, fallback to cached data if needed
+                    try {
+                        await loadRealData();
+                    } catch (error) {
+                        console.log('Real data loading failed, attempting cached data...');
+                        await fastReloadAllData();
+                    }
+                    
                     showNotification('Admin login successful!', 'success');
                     return;
                 }
@@ -2002,8 +2014,21 @@
                     return;
                 }
 
-                // Test database connection first
-                await testDatabaseConnection();
+                // Try loading from cache first for immediate display
+                const cachedTournaments = getCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    console.log('⚡ Loaded tournaments from cache while connecting to database');
+                }
+
+                // Test database connection with fallback
+                try {
+                    await testDatabaseConnection();
+                } catch (connectionError) {
+                    console.warn('Database connection test failed, but attempting to load data anyway:', connectionError);
+                    // Continue with data loading attempt
+                }
 
                 // Load real tournaments with timeout
                 console.log('Loading tournaments...');
@@ -2084,13 +2109,25 @@
             } catch (error) {
                 console.error('Error loading real data:', error);
                 
+                // Try to use cached data if available
+                const cachedTournaments = getCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    console.log('⚡ Using cached data due to database error');
+                    showNotification('Using cached data - database connection issues', 'warning');
+                    updateConnectionStatus('offline', 'Using Cache');
+                    return;
+                }
+                
                 if (error.code === 'permission-denied') {
-                    showNotification('Permission denied. Please check your admin privileges.', 'error');
+                    showNotification('Permission denied. Please check your admin privileges. Loading demo data.', 'error');
                     updateConnectionStatus('offline', 'Permission Denied');
                 } else if (error.code === 'unavailable') {
-                    showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                    showNotification('Database temporarily unavailable. Loading demo data.', 'error');
                     updateConnectionStatus('offline', 'Service Unavailable');
                 } else {
+                    showNotification('Database connection failed. Loading demo data.', 'error');
                     updateConnectionStatus('offline', 'Connection Failed');
                 }
                 
@@ -2549,12 +2586,36 @@
                  loadTournaments();
                  updateUserStats();
                  updateRealTimeStats();
+                 updateConnectionStatus('online', 'Connected');
                  
                  showNotification('✅ All data reloaded successfully!', 'success');
                  
              } catch (error) {
                  console.error('Error in fast reload:', error);
-                 showNotification('❌ Error reloading data', 'error');
+                 
+                 // Try to load any available cached data
+                 displayTournamentsFromCache();
+                 updateConnectionStatus('offline', 'Using Cache');
+                 showNotification('⚠️ Using cached data - check connection', 'warning');
+             }
+         }
+         
+         // Force real data connection (bypass demo mode)
+         async function forceRealConnection() {
+             showNotification('🔄 Forcing real database connection...', 'info');
+             
+             try {
+                 // Clear any cached connection status
+                 updateConnectionStatus('connecting', 'Connecting...');
+                 
+                 // Try to load real data directly
+                 await loadRealData();
+                 
+                 showNotification('✅ Real database connection successful!', 'success');
+                 
+             } catch (error) {
+                 console.error('Force connection failed:', error);
+                 await fastReloadAllData();
              }
          }
 
