@@ -2,76 +2,159 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection - users can read/write their own data
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Helper function for datetime validation
+    function isValidDateTime() {
+      return request.resource.data.keys().hasAny(['createdAt', 'updatedAt', 'datetime', 'timestamp']) &&
+        (request.resource.data.get('createdAt', timestamp.date(1970, 1, 1)) is timestamp ||
+         request.resource.data.get('updatedAt', timestamp.date(1970, 1, 1)) is timestamp ||
+         request.resource.data.get('datetime', '') is string ||
+         request.resource.data.get('timestamp', timestamp.date(1970, 1, 1)) is timestamp);
+    }
+    
+    // Universal read rule for both admin and user
+    function canRead(userId) {
+      return isAuthenticated() && (isAdmin() || isOwner(userId));
+    }
+    
+    // Universal write rule with datetime validation
+    function canWrite(userId) {
+      return isAuthenticated() && (isAdmin() || isOwner(userId)) && isValidDateTime();
+    }
+    
+    // Users collection - optimized for both admin and user access
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+      allow read: if canRead(userId);
+      allow write: if canWrite(userId);
+      allow create: if isAuthenticated() && isValidDateTime();
+      
+      // Allow admins to read all users for dashboard
+      allow read: if isAdmin();
+      // Bootstrap rule for hardcoded admin
+      allow read, write, create: if isAuthenticated() && request.auth.token.email == 'Rprasada273@gmail.com' && isValidDateTime();
+      
+      // Sub-collections for user data
+      match /sessions/{sessionId} {
+        allow read, write: if canRead(userId) || canWrite(userId);
+      }
+      
+      match /preferences/{prefId} {
+        allow read, write: if canRead(userId) || canWrite(userId);
+      }
     }
     
-    // Admins collection - only admins can access
+    // Admins collection - enhanced with datetime tracking
     match /admins/{adminId} {
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == adminId || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow create: if request.auth != null;
+      allow read: if isAuthenticated() && (isOwner(adminId) || isAdmin());
+      allow write: if isAuthenticated() && (isOwner(adminId) || isAdmin()) && isValidDateTime();
+      // Allow any authenticated user to create admin document (for first admin bootstrap)
+      allow create: if isAuthenticated() && isValidDateTime();
+      // Special rule for hardcoded admin bootstrap
+      allow create: if isAuthenticated() && request.auth.token.email == 'Rprasada273@gmail.com';
+      
+      // Admin activity logs
+      match /activityLogs/{logId} {
+        allow read: if isAdmin();
+        allow create: if isAdmin() && isValidDateTime();
+      }
     }
     
-    // Tournaments collection - authenticated users can read, admins can write
+    // Tournaments collection - optimized for fast reads
     match /tournaments/{tournamentId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-      allow create: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read: if isAuthenticated(); // Fast read for all authenticated users
+      allow write: if isAdmin() && isValidDateTime();
+      allow create: if isAdmin() && isValidDateTime();
+      // Bootstrap rule for hardcoded admin
+      allow write, create: if isAuthenticated() && request.auth.token.email == 'Rprasada273@gmail.com' && isValidDateTime();
+      
+      // Tournament participants sub-collection
+      match /participants/{participantId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidDateTime();
+        allow update, delete: if canWrite(participantId) || isAdmin();
+      }
     }
     
-    // Tournament registrations - users can manage their own registrations
+    // Tournament registrations - enhanced permissions
     match /tournamentRegistrations/{registrationId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && 
-        request.auth.uid == resource.data.userId;
-      allow update, delete: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    
-    // Topup requests - users can create their own, admins can manage all
-    match /topupRequests/{requestId} {
-      allow read: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow create: if request.auth != null && 
+      allow read: if isAuthenticated(); // Fast read access
+      allow create: if isAuthenticated() && isValidDateTime() && 
         request.auth.uid == request.resource.data.userId;
-      allow update: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow update, delete: if canWrite(resource.data.userId) || isAdmin();
     }
     
-    // System settings - only admins can access
+    // Topup requests - with datetime validation
+    match /topupRequests/{requestId} {
+      allow read: if canRead(resource.data.userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidDateTime() && 
+        request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin() && isValidDateTime();
+    }
+    
+    // System settings - cached reads, admin writes
     match /settings/{settingId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read: if isAuthenticated(); // Allow caching for all users
+      allow write: if isAdmin() && isValidDateTime();
     }
     
-    // Notifications - authenticated users can read, admins can write
+    // Notifications - optimized for real-time updates
     match /notifications/{notificationId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidDateTime();
+      allow delete: if isAdmin();
+      
+      // User-specific notifications
+      match /userNotifications/{userId} {
+        allow read: if canRead(userId);
+        allow write: if isAdmin() && isValidDateTime();
+      }
     }
     
-    // Referrals - users can read their own referrals
+    // Referrals - enhanced with datetime tracking
     match /referrals/{referralId} {
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.referrerId || 
-         request.auth.uid == resource.data.referredUserId ||
-         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow create: if request.auth != null;
+      allow read: if canRead(resource.data.referrerId) || 
+        canRead(resource.data.referredUserId) || isAdmin();
+      allow create: if isAuthenticated() && isValidDateTime();
+      allow update: if isAdmin() && isValidDateTime();
     }
     
-    // Test collection - for connection testing (temporary)
+    // Cache collection for performance optimization
+    match /cache/{cacheId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidDateTime();
+      allow create: if isAuthenticated() && isValidDateTime();
+    }
+    
+    // Activity logs for monitoring and debugging
+    match /activityLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidDateTime();
+    }
+    
+    // System metrics for performance monitoring
+    match /metrics/{metricId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidDateTime();
+    }
+    
+    // Test collection - for connection testing
     match /test/{testId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAuthenticated();
     }
   }
 }

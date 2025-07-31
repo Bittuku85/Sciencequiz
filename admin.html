@@ -758,11 +758,27 @@
                  <i class="fas fa-money-bill"></i>
                  Topup Requests
              </button>
-             <button class="nav-item" onclick="showSection('settings')">
-                 <i class="fas fa-cog"></i>
-                 Settings
-             </button>
-             <button class="nav-item" onclick="adminLogout()" style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                             <button class="nav-item" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </button>
+                <button class="nav-item" onclick="fastReloadAllData()" style="margin-top: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+                    <i class="fas fa-sync-alt"></i>
+                    Fast Reload
+                </button>
+                <button class="nav-item" onclick="forceRealConnection()" style="margin-top: 0.5rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; color: white;">
+                    <i class="fas fa-database"></i>
+                    Force Real DB
+                </button>
+                <button class="nav-item" onclick="debugFirebaseState()" style="margin-top: 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; font-size: 0.8rem;">
+                    <i class="fas fa-bug"></i>
+                    Debug Firebase
+                </button>
+                <button class="nav-item" onclick="manualAdminSetup()" style="margin-top: 0.5rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; color: white; font-size: 0.8rem;">
+                    <i class="fas fa-user-shield"></i>
+                    Setup Admin
+                </button>
+                <button class="nav-item" onclick="adminLogout()" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                  <i class="fas fa-sign-out-alt"></i>
                  Logout
              </button>
@@ -1348,10 +1364,12 @@
         };
 
         // Initialize Firebase with error handling
+        let db, auth; // Global variables for Firebase services
+        
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
             console.log('Firebase initialized successfully');
             
@@ -1359,7 +1377,7 @@
             setTimeout(() => {
                 if (firebaseConfig.apiKey === "AIzaSyBvOkBwM1FnVWoE3KjJ5rOqFhTpR8sC2dA") {
                     console.warn('⚠️ WARNING: Using default Firebase config. Please update with your actual project settings.');
-                    showNotification('Using demo Firebase config. Update FIREBASE_SETUP.md for real project.', 'warning');
+                    showNotification('Using demo Firebase config but attempting real connection...', 'info');
                 }
             }, 2000);
             
@@ -1377,8 +1395,146 @@
          let editingTournament = null;
          let topupRequests = [];
          let selectedTopups = [];
+        
+        // Enhanced datetime utilities for both admin and user
+        const DateTimeUtils = {
+            getCurrentISO: () => new Date().toISOString(),
+            getCurrentTimestamp: () => firebase.firestore.FieldValue.serverTimestamp(),
+            formatForDisplay: (dateStr) => {
+                const date = new Date(dateStr);
+                return {
+                    date: date.toLocaleDateString('en-IN'),
+                    time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                    full: date.toLocaleString('en-IN')
+                };
+            },
+            getDefaultTournamentTime: () => {
+                const now = new Date();
+                now.setHours(now.getHours() + 1);
+                return now.toISOString().slice(0, 16);
+            },
+            isValidDateTime: (dateStr) => {
+                const date = new Date(dateStr);
+                return !isNaN(date.getTime()) && date > new Date();
+            }
+        };
 
-
+        // Fast Caching System for Performance Optimization
+        let cacheStore = {
+            tournaments: null,
+            users: null,
+            topupRequests: null,
+            settings: null,
+            lastUpdate: {
+                tournaments: null,
+                users: null,
+                topupRequests: null,
+                settings: null
+            }
+        };
+        
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        
+        function initializeCacheSystem() {
+            console.log('🚀 Initializing fast cache system...');
+            loadCacheFromStorage();
+        }
+        
+        function loadCacheFromStorage() {
+            try {
+                const cachedData = localStorage.getItem('adminDataCache');
+                if (cachedData) {
+                    cacheStore = JSON.parse(cachedData);
+                    console.log('📦 Loaded cached data from storage');
+                    
+                    // Load cached data to UI immediately for fast display
+                    if (cacheStore.tournaments && isValidCache('tournaments')) {
+                        displayTournamentsFromCache();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading cache:', error);
+                clearCache();
+            }
+        }
+        
+        function isValidCache(dataType) {
+            const lastUpdate = cacheStore.lastUpdate[dataType];
+            if (!lastUpdate) return false;
+            return (Date.now() - new Date(lastUpdate).getTime()) < CACHE_DURATION;
+        }
+        
+        function setCacheData(dataType, data) {
+            cacheStore[dataType] = data;
+            cacheStore.lastUpdate[dataType] = new Date().toISOString();
+            
+            // Save to localStorage
+            try {
+                localStorage.setItem('adminDataCache', JSON.stringify(cacheStore));
+                console.log(`📊 Cached ${dataType} data (${data?.length || 0} items)`);
+            } catch (error) {
+                console.error('Error saving cache:', error);
+            }
+        }
+        
+        function getCacheData(dataType) {
+            if (isValidCache(dataType)) {
+                console.log(`⚡ Using cached ${dataType} data`);
+                return cacheStore[dataType];
+            }
+            return null;
+        }
+        
+        function clearCache() {
+            cacheStore = {
+                tournaments: null,
+                users: null,
+                topupRequests: null,
+                settings: null,
+                lastUpdate: {
+                    tournaments: null,
+                    users: null,
+                    topupRequests: null,
+                    settings: null
+                }
+            };
+            localStorage.removeItem('adminDataCache');
+            console.log('🗑️ Cache cleared');
+        }
+        
+        function displayTournamentsFromCache() {
+            if (cacheStore.tournaments) {
+                window.tournaments = cacheStore.tournaments;
+                displayTournaments(cacheStore.tournaments);
+                console.log('⚡ Displayed tournaments from cache');
+            }
+        }
+        
+        // Fast reload function for both admin and user data
+        async function fastReloadData() {
+            showNotification('🔄 Fast reloading data...', 'info');
+            
+            try {
+                // Load from cache first for immediate display
+                displayTournamentsFromCache();
+                
+                // Then fetch fresh data in parallel
+                const promises = [];
+                
+                if (!isValidCache('tournaments')) {
+                    promises.push(loadTournamentsWithCache());
+                }
+                
+                // Wait for all data to load
+                await Promise.all(promises);
+                
+                showNotification('✅ Data reloaded successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error in fast reload:', error);
+                showNotification('❌ Error reloading data', 'error');
+            }
+        }
 
         // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
@@ -1386,6 +1542,9 @@
         });
 
                          function initializeApp() {
+            // Initialize fast caching system
+            initializeCacheSystem();
+            
             // Check for stored admin session first
             const storedAdmin = localStorage.getItem('adminSession');
             if (storedAdmin) {
@@ -1447,6 +1606,40 @@
 
         async function checkAdminAccess(user) {
             try {
+                console.log('Checking admin access for user:', user.email);
+                
+                // For hardcoded admin, ensure they have admin privileges
+                if (user.email === 'Rprasada273@gmail.com') {
+                    console.log('Hardcoded admin detected, ensuring admin record exists...');
+                    try {
+                        const adminDoc = await db.collection('admins').doc(user.uid).get();
+                        if (!adminDoc.exists) {
+                            // Create admin record for hardcoded admin
+                            console.log('Creating admin record for hardcoded admin...');
+                            await createFirstAdmin(user);
+                        }
+                        showAdminInterface();
+                        loadRealData();
+                        return;
+                    } catch (permError) {
+                        console.error('Permission error for hardcoded admin, creating with retry:', permError);
+                        // If permission denied, this might be the first time - try to create anyway
+                        try {
+                            await createFirstAdmin(user);
+                            showAdminInterface();
+                            loadRealData();
+                            return;
+                        } catch (createError) {
+                            console.error('Failed to create hardcoded admin record:', createError);
+                            showNotification('Permission setup required. Using cached data.', 'warning');
+                            showAdminInterface();
+                            await fastReloadAllData();
+                            return;
+                        }
+                    }
+                }
+                
+                // For other users, check normal admin access
                 const adminDoc = await db.collection('admins').doc(user.uid).get();
                 if (adminDoc.exists) {
                     // User is admin
@@ -1468,7 +1661,13 @@
                 }
             } catch (error) {
                 console.error('Error checking admin access:', error);
-                showNotification('Error verifying admin access', 'error');
+                if (error.code === 'permission-denied') {
+                    showNotification('Database permissions not configured. Using cached data.', 'warning');
+                    showAdminInterface();
+                    await fastReloadAllData();
+                } else {
+                    showNotification('Error verifying admin access', 'error');
+                }
             }
         }
 
@@ -1548,10 +1747,38 @@
             try {
                 // Check for hardcoded admin credentials first
                 if (email === 'Rprasada273@gmail.com' && password === '59029400') {
-                    // Create a mock user session for hardcoded admin
-                    await createHardcodedAdminSession();
-                    showAdminInterface();
-                    loadRealData();
+                    try {
+                        // Try Firebase authentication first
+                        console.log('Attempting Firebase authentication for admin...');
+                        await auth.signInWithEmailAndPassword(email, password);
+                        console.log('Firebase authentication successful for admin');
+                        showNotification('Admin authenticated with Firebase!', 'success');
+                    } catch (authError) {
+                        console.log('Firebase auth failed for hardcoded admin, will create account:', authError.code);
+                        
+                        // If user doesn't exist, create the admin account
+                        if (authError.code === 'auth/user-not-found') {
+                            try {
+                                console.log('Creating hardcoded admin account in Firebase Auth...');
+                                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                                await userCredential.user.updateProfile({
+                                    displayName: 'Admin User'
+                                });
+                                showNotification('Admin account created and authenticated!', 'success');
+                            } catch (createError) {
+                                console.error('Failed to create admin account:', createError);
+                                showNotification('Failed to create admin account. Using local session.', 'warning');
+                                await createHardcodedAdminSession();
+                            }
+                        } else {
+                            console.error('Authentication failed:', authError);
+                            showNotification('Authentication failed. Using local session.', 'warning');
+                            await createHardcodedAdminSession();
+                        }
+                    }
+                    
+                    // Let the auth state change handler take over
+                    // It will call checkAdminAccess which will handle the admin verification and data loading
                     showNotification('Admin login successful!', 'success');
                     return;
                 }
@@ -1588,6 +1815,12 @@
         async function testDatabaseConnection() {
             try {
                 console.log('Testing database connection...');
+                
+                // Check if db is defined
+                if (!db) {
+                    throw new Error('Database not initialized - db variable is undefined');
+                }
+                
                 // Try to read from a simple collection with timeout
                 await Promise.race([
                     db.collection('test').limit(1).get(),
@@ -1597,6 +1830,9 @@
                 return true;
             } catch (error) {
                 console.error('Database connection failed:', error);
+                if (error.name === 'ReferenceError') {
+                    console.error('ReferenceError details:', error.message);
+                }
                 throw error;
             }
         }
@@ -1760,6 +1996,90 @@
                 console.log('Note: Could not create admin record in database (offline mode)');
             }
         }
+        
+        // Enhanced data loading with caching for speed
+        async function loadTournamentsWithCache() {
+            try {
+                // First check cache
+                const cachedTournaments = getCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    return;
+                }
+                
+                // Load from database if not in cache
+                console.log('Loading tournaments from database...');
+                const tournamentsSnapshot = await db.collection('tournaments').orderBy('datetime', 'desc').get();
+                
+                tournaments = tournamentsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                // Cache the data
+                setCacheData('tournaments', tournaments);
+                loadTournaments();
+                
+                console.log(`Loaded and cached ${tournaments.length} tournaments`);
+                
+            } catch (error) {
+                console.error('Error loading tournaments:', error);
+                loadMockData();
+            }
+        }
+        
+        async function loadUsersWithCache() {
+            try {
+                const cachedUsers = getCacheData('users');
+                if (cachedUsers) {
+                    players = cachedUsers;
+                    updateUserStats();
+                    return;
+                }
+                
+                console.log('Loading users from database...');
+                const usersSnapshot = await db.collection('users').get();
+                
+                players = usersSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                setCacheData('users', players);
+                updateUserStats();
+                
+                console.log(`Loaded and cached ${players.length} users`);
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+        
+        async function loadTopupRequestsWithCache() {
+            try {
+                const cachedRequests = getCacheData('topupRequests');
+                if (cachedRequests) {
+                    topupRequests = cachedRequests;
+                    return;
+                }
+                
+                console.log('Loading topup requests from database...');
+                const topupsSnapshot = await db.collection('topupRequests').get();
+                
+                topupRequests = topupsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                setCacheData('topupRequests', topupRequests);
+                
+                console.log(`Loaded and cached ${topupRequests.length} topup requests`);
+                
+            } catch (error) {
+                console.error('Error loading topup requests:', error);
+            }
+        }
 
         async function loadRealData() {
             try {
@@ -1773,11 +2093,30 @@
                     return;
                 }
 
-                // Test database connection first
-                await testDatabaseConnection();
+                // Try loading from cache first for immediate display
+                const cachedTournaments = getCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    console.log('⚡ Loaded tournaments from cache while connecting to database');
+                }
+
+                // Test database connection with fallback
+                try {
+                    await testDatabaseConnection();
+                } catch (connectionError) {
+                    console.warn('Database connection test failed, but attempting to load data anyway:', connectionError);
+                    // Continue with data loading attempt
+                }
 
                 // Load real tournaments with timeout
                 console.log('Loading tournaments...');
+                
+                // Verify db is still available
+                if (!db) {
+                    throw new Error('Database connection lost - db variable is undefined');
+                }
+                
                 const tournamentsSnapshot = await Promise.race([
                     db.collection('tournaments').get(),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
@@ -1855,13 +2194,25 @@
             } catch (error) {
                 console.error('Error loading real data:', error);
                 
+                // Try to use cached data if available
+                const cachedTournaments = getCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    console.log('⚡ Using cached data due to database error');
+                    showNotification('Using cached data - database connection issues', 'warning');
+                    updateConnectionStatus('offline', 'Using Cache');
+                    return;
+                }
+                
                 if (error.code === 'permission-denied') {
-                    showNotification('Permission denied. Please check your admin privileges.', 'error');
+                    showNotification('Permission denied. Please check your admin privileges. Loading demo data.', 'error');
                     updateConnectionStatus('offline', 'Permission Denied');
                 } else if (error.code === 'unavailable') {
-                    showNotification('Database temporarily unavailable. Please try again later.', 'error');
+                    showNotification('Database temporarily unavailable. Loading demo data.', 'error');
                     updateConnectionStatus('offline', 'Service Unavailable');
                 } else {
+                    showNotification('Database connection failed. Loading demo data.', 'error');
                     updateConnectionStatus('offline', 'Connection Failed');
                 }
                 
@@ -2292,10 +2643,119 @@
          }
 
          function refreshTopupRequests() {
+             // Clear cache and reload with fresh data
+             clearCache();
              syncTopupRequests();
              loadTopupRequests();
              showNotification('Topup requests refreshed!', 'success');
          }
+         
+         // Enhanced fast reload function for admin interface
+         async function fastReloadAllData() {
+             showNotification('🚀 Fast reloading all data...', 'info');
+             
+             try {
+                 // Load from cache first for immediate display
+                 displayTournamentsFromCache();
+                 
+                 // Then reload fresh data in parallel
+                 const promises = [
+                     loadTournamentsWithCache(),
+                     loadUsersWithCache(),
+                     loadTopupRequestsWithCache()
+                 ];
+                 
+                 await Promise.all(promises);
+                 
+                 // Update all displays
+                 loadTournaments();
+                 updateUserStats();
+                 updateRealTimeStats();
+                 updateConnectionStatus('online', 'Connected');
+                 
+                 showNotification('✅ All data reloaded successfully!', 'success');
+                 
+             } catch (error) {
+                 console.error('Error in fast reload:', error);
+                 
+                 // Try to load any available cached data
+                 displayTournamentsFromCache();
+                 updateConnectionStatus('offline', 'Using Cache');
+                 showNotification('⚠️ Using cached data - check connection', 'warning');
+             }
+         }
+         
+                   // Force real data connection (bypass demo mode)
+          async function forceRealConnection() {
+              showNotification('🔄 Forcing real database connection...', 'info');
+              
+              try {
+                  // Debug: Check Firebase state
+                  console.log('Debug - Firebase apps:', firebase.apps.length);
+                  console.log('Debug - db defined:', typeof db);
+                  console.log('Debug - auth defined:', typeof auth);
+                  
+                  // Clear any cached connection status
+                  updateConnectionStatus('connecting', 'Connecting...');
+                  
+                  // Try to load real data directly
+                  await loadRealData();
+                  
+                  showNotification('✅ Real database connection successful!', 'success');
+                  
+              } catch (error) {
+                  console.error('Force connection failed:', error);
+                  showNotification('❌ Force connection failed: ' + error.message, 'error');
+                  await fastReloadAllData();
+              }
+          }
+          
+                     // Debug function to check Firebase state
+           function debugFirebaseState() {
+               console.log('=== Firebase Debug Info ===');
+               console.log('Firebase apps initialized:', firebase.apps.length);
+               console.log('db variable type:', typeof db);
+               console.log('auth variable type:', typeof auth);
+               console.log('db defined:', db !== undefined);
+               console.log('auth defined:', auth !== undefined);
+               
+               if (db) {
+                   console.log('db.app.name:', db.app.name);
+               }
+               
+               if (auth) {
+                   console.log('auth.app.name:', auth.app.name);
+                   console.log('auth.currentUser:', auth.currentUser ? auth.currentUser.email : 'Not logged in');
+               }
+               console.log('=== End Debug Info ===');
+           }
+           
+           // Manual admin setup function
+           async function manualAdminSetup() {
+               showNotification('🔧 Setting up admin permissions manually...', 'info');
+               
+               try {
+                   if (!auth.currentUser) {
+                       showNotification('❌ Please login first', 'error');
+                       return;
+                   }
+                   
+                   const user = auth.currentUser;
+                   console.log('Creating admin record for:', user.email);
+                   
+                   // Force create admin record
+                   await createFirstAdmin(user);
+                   
+                   showNotification('✅ Admin permissions set up successfully!', 'success');
+                   
+                   // Try to reload data
+                   await loadRealData();
+                   
+               } catch (error) {
+                   console.error('Manual admin setup failed:', error);
+                   showNotification('❌ Admin setup failed: ' + error.message, 'error');
+               }
+           }
 
                  async function approveTopup(requestId) {
             const request = topupRequests.find(r => r.id === requestId);
