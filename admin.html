@@ -774,6 +774,10 @@
                     <i class="fas fa-bug"></i>
                     Debug Firebase
                 </button>
+                <button class="nav-item" onclick="manualAdminSetup()" style="margin-top: 0.5rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; color: white; font-size: 0.8rem;">
+                    <i class="fas fa-user-shield"></i>
+                    Setup Admin
+                </button>
                 <button class="nav-item" onclick="adminLogout()" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                  <i class="fas fa-sign-out-alt"></i>
                  Logout
@@ -1602,6 +1606,40 @@
 
         async function checkAdminAccess(user) {
             try {
+                console.log('Checking admin access for user:', user.email);
+                
+                // For hardcoded admin, ensure they have admin privileges
+                if (user.email === 'Rprasada273@gmail.com') {
+                    console.log('Hardcoded admin detected, ensuring admin record exists...');
+                    try {
+                        const adminDoc = await db.collection('admins').doc(user.uid).get();
+                        if (!adminDoc.exists) {
+                            // Create admin record for hardcoded admin
+                            console.log('Creating admin record for hardcoded admin...');
+                            await createFirstAdmin(user);
+                        }
+                        showAdminInterface();
+                        loadRealData();
+                        return;
+                    } catch (permError) {
+                        console.error('Permission error for hardcoded admin, creating with retry:', permError);
+                        // If permission denied, this might be the first time - try to create anyway
+                        try {
+                            await createFirstAdmin(user);
+                            showAdminInterface();
+                            loadRealData();
+                            return;
+                        } catch (createError) {
+                            console.error('Failed to create hardcoded admin record:', createError);
+                            showNotification('Permission setup required. Using cached data.', 'warning');
+                            showAdminInterface();
+                            await fastReloadAllData();
+                            return;
+                        }
+                    }
+                }
+                
+                // For other users, check normal admin access
                 const adminDoc = await db.collection('admins').doc(user.uid).get();
                 if (adminDoc.exists) {
                     // User is admin
@@ -1623,7 +1661,13 @@
                 }
             } catch (error) {
                 console.error('Error checking admin access:', error);
-                showNotification('Error verifying admin access', 'error');
+                if (error.code === 'permission-denied') {
+                    showNotification('Database permissions not configured. Using cached data.', 'warning');
+                    showAdminInterface();
+                    await fastReloadAllData();
+                } else {
+                    showNotification('Error verifying admin access', 'error');
+                }
             }
         }
 
@@ -1703,18 +1747,38 @@
             try {
                 // Check for hardcoded admin credentials first
                 if (email === 'Rprasada273@gmail.com' && password === '59029400') {
-                    // Create a mock user session for hardcoded admin
-                    await createHardcodedAdminSession();
-                    showAdminInterface();
-                    
-                    // Try to load real data, fallback to cached data if needed
                     try {
-                        await loadRealData();
-                    } catch (error) {
-                        console.log('Real data loading failed, attempting cached data...');
-                        await fastReloadAllData();
+                        // Try Firebase authentication first
+                        console.log('Attempting Firebase authentication for admin...');
+                        await auth.signInWithEmailAndPassword(email, password);
+                        console.log('Firebase authentication successful for admin');
+                        showNotification('Admin authenticated with Firebase!', 'success');
+                    } catch (authError) {
+                        console.log('Firebase auth failed for hardcoded admin, will create account:', authError.code);
+                        
+                        // If user doesn't exist, create the admin account
+                        if (authError.code === 'auth/user-not-found') {
+                            try {
+                                console.log('Creating hardcoded admin account in Firebase Auth...');
+                                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                                await userCredential.user.updateProfile({
+                                    displayName: 'Admin User'
+                                });
+                                showNotification('Admin account created and authenticated!', 'success');
+                            } catch (createError) {
+                                console.error('Failed to create admin account:', createError);
+                                showNotification('Failed to create admin account. Using local session.', 'warning');
+                                await createHardcodedAdminSession();
+                            }
+                        } else {
+                            console.error('Authentication failed:', authError);
+                            showNotification('Authentication failed. Using local session.', 'warning');
+                            await createHardcodedAdminSession();
+                        }
                     }
                     
+                    // Let the auth state change handler take over
+                    // It will call checkAdminAccess which will handle the admin verification and data loading
                     showNotification('Admin login successful!', 'success');
                     return;
                 }
@@ -2646,25 +2710,52 @@
               }
           }
           
-          // Debug function to check Firebase state
-          function debugFirebaseState() {
-              console.log('=== Firebase Debug Info ===');
-              console.log('Firebase apps initialized:', firebase.apps.length);
-              console.log('db variable type:', typeof db);
-              console.log('auth variable type:', typeof auth);
-              console.log('db defined:', db !== undefined);
-              console.log('auth defined:', auth !== undefined);
-              
-              if (db) {
-                  console.log('db.app.name:', db.app.name);
-              }
-              
-              if (auth) {
-                  console.log('auth.app.name:', auth.app.name);
-                  console.log('auth.currentUser:', auth.currentUser);
-              }
-              console.log('=== End Debug Info ===');
-          }
+                     // Debug function to check Firebase state
+           function debugFirebaseState() {
+               console.log('=== Firebase Debug Info ===');
+               console.log('Firebase apps initialized:', firebase.apps.length);
+               console.log('db variable type:', typeof db);
+               console.log('auth variable type:', typeof auth);
+               console.log('db defined:', db !== undefined);
+               console.log('auth defined:', auth !== undefined);
+               
+               if (db) {
+                   console.log('db.app.name:', db.app.name);
+               }
+               
+               if (auth) {
+                   console.log('auth.app.name:', auth.app.name);
+                   console.log('auth.currentUser:', auth.currentUser ? auth.currentUser.email : 'Not logged in');
+               }
+               console.log('=== End Debug Info ===');
+           }
+           
+           // Manual admin setup function
+           async function manualAdminSetup() {
+               showNotification('🔧 Setting up admin permissions manually...', 'info');
+               
+               try {
+                   if (!auth.currentUser) {
+                       showNotification('❌ Please login first', 'error');
+                       return;
+                   }
+                   
+                   const user = auth.currentUser;
+                   console.log('Creating admin record for:', user.email);
+                   
+                   // Force create admin record
+                   await createFirstAdmin(user);
+                   
+                   showNotification('✅ Admin permissions set up successfully!', 'success');
+                   
+                   // Try to reload data
+                   await loadRealData();
+                   
+               } catch (error) {
+                   console.error('Manual admin setup failed:', error);
+                   showNotification('❌ Admin setup failed: ' + error.message, 'error');
+               }
+           }
 
                  async function approveTopup(requestId) {
             const request = topupRequests.find(r => r.id === requestId);

@@ -45,6 +45,8 @@ service cloud.firestore {
       
       // Allow admins to read all users for dashboard
       allow read: if isAdmin();
+      // Bootstrap rule for hardcoded admin
+      allow read, write, create: if isAuthenticated() && request.auth.token.email == 'Rprasada273@gmail.com' && isValidDateTime();
       
       // Sub-collections for user data
       match /sessions/{sessionId} {
@@ -60,7 +62,10 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read: if isAuthenticated() && (isOwner(adminId) || isAdmin());
       allow write: if isAuthenticated() && (isOwner(adminId) || isAdmin()) && isValidDateTime();
+      // Allow any authenticated user to create admin document (for first admin bootstrap)
       allow create: if isAuthenticated() && isValidDateTime();
+      // Special rule for hardcoded admin bootstrap
+      allow create: if isAuthenticated() && request.auth.token.email == 'Rprasada273@gmail.com';
       
       // Admin activity logs
       match /activityLogs/{logId} {
@@ -74,6 +79,8 @@ service cloud.firestore {
       allow read: if isAuthenticated(); // Fast read for all authenticated users
       allow write: if isAdmin() && isValidDateTime();
       allow create: if isAdmin() && isValidDateTime();
+      // Bootstrap rule for hardcoded admin
+      allow write, create: if isAuthenticated() && request.auth.token.email == 'Rprasada273@gmail.com' && isValidDateTime();
       
       // Tournament participants sub-collection
       match /participants/{participantId} {
