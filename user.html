@@ -829,7 +829,7 @@
                     </div>
 
                     <div class="earnings-display">
-                        <div class="earnings-amount">₹<span id="referralEarnings">150</span></div>
+                        <div class="earnings-amount">₹<span id="referralEarnings">0</span></div>
                         <div>Total Referral Earnings</div>
                     </div>
                 </div>
@@ -842,7 +842,7 @@
                         <div class="avatar">R</div>
                         <div class="profile-info">
                             <h3 id="userName">Rohan Sharma</h3>
-                            <div class="profile-uid">UID: <span id="userUID">987654321</span></div>
+                            <div class="profile-uid">UID: <span id="userUID">-</span></div>
                         </div>
                     </div>
 
@@ -852,7 +852,7 @@
                             <div class="stat-label">Tournaments Joined</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value" id="totalWinnings">₹2,500</div>
+                            <div class="stat-value" id="totalWinnings">₹0</div>
                             <div class="stat-label">Total Winnings</div>
                         </div>
                     </div>
@@ -1527,6 +1527,7 @@
                         walletBalance: userData.walletBalance || 0,
                         referralCode: userData.referralCode,
                         referralEarnings: userData.referralEarnings || 0,
+                        totalWinnings: userData.totalWinnings || 0,
                         joinedAt: userData.joinedAt
                     };
                     console.log('User data loaded successfully:', currentUser.name);
@@ -1541,6 +1542,7 @@
                         walletBalance: 25, // Welcome bonus
                         referralCode: generateReferralCode(),
                         referralEarnings: 0,
+                        totalWinnings: 0,
                         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
                         status: 'active'
                     };
@@ -1601,7 +1603,8 @@
                         name: user.displayName || user.email.split('@')[0],
                         walletBalance: 0,
                         referralCode: 'N/A',
-                        referralEarnings: 0
+                        referralEarnings: 0,
+                        totalWinnings: 0
                     };
                     
                 } else {
@@ -1614,7 +1617,8 @@
                         name: user.displayName || user.email.split('@')[0],
                         walletBalance: 0,
                         referralCode: 'N/A',
-                        referralEarnings: 0
+                        referralEarnings: 0,
+                        totalWinnings: 0
                     };
                 }
                 
@@ -2000,11 +2004,17 @@
 
         // Profile Functions
         function loadUserProfile() {
-            document.getElementById('userName').textContent = currentUser.name;
-            document.getElementById('userUID').textContent = currentUser.ffUID;
-            document.getElementById('tournamentsJoined').textContent = userRegistrations.length;
-            document.getElementById('userReferralCode').textContent = currentUser.referralCode;
-            document.getElementById('referralEarnings').textContent = currentUser.referralEarnings;
+            document.getElementById('userName').textContent = currentUser.name || 'Guest User';
+            document.getElementById('userUID').textContent = currentUser.ffUID || '-';
+            document.getElementById('tournamentsJoined').textContent = userRegistrations.length || 0;
+            document.getElementById('userReferralCode').textContent = currentUser.referralCode || '-';
+            document.getElementById('referralEarnings').textContent = currentUser.referralEarnings || 0;
+            document.getElementById('totalWinnings').textContent = '₹' + (currentUser.totalWinnings || 0).toLocaleString();
+            
+            // Update wallet display
+            if (currentUser.walletBalance !== undefined) {
+                updateWalletDisplay(currentUser.walletBalance);
+            }
         }
 
         function openRegistrationsModal() {
