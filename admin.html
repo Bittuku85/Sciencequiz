@@ -770,6 +770,10 @@
                     <i class="fas fa-database"></i>
                     Force Real DB
                 </button>
+                <button class="nav-item" onclick="debugFirebaseState()" style="margin-top: 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; font-size: 0.8rem;">
+                    <i class="fas fa-bug"></i>
+                    Debug Firebase
+                </button>
                 <button class="nav-item" onclick="adminLogout()" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                  <i class="fas fa-sign-out-alt"></i>
                  Logout
@@ -1356,10 +1360,12 @@
         };
 
         // Initialize Firebase with error handling
+        let db, auth; // Global variables for Firebase services
+        
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
             console.log('Firebase initialized successfully');
             
@@ -1745,6 +1751,12 @@
         async function testDatabaseConnection() {
             try {
                 console.log('Testing database connection...');
+                
+                // Check if db is defined
+                if (!db) {
+                    throw new Error('Database not initialized - db variable is undefined');
+                }
+                
                 // Try to read from a simple collection with timeout
                 await Promise.race([
                     db.collection('test').limit(1).get(),
@@ -1754,6 +1766,9 @@
                 return true;
             } catch (error) {
                 console.error('Database connection failed:', error);
+                if (error.name === 'ReferenceError') {
+                    console.error('ReferenceError details:', error.message);
+                }
                 throw error;
             }
         }
@@ -2032,6 +2047,12 @@
 
                 // Load real tournaments with timeout
                 console.log('Loading tournaments...');
+                
+                // Verify db is still available
+                if (!db) {
+                    throw new Error('Database connection lost - db variable is undefined');
+                }
+                
                 const tournamentsSnapshot = await Promise.race([
                     db.collection('tournaments').get(),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
@@ -2600,24 +2621,50 @@
              }
          }
          
-         // Force real data connection (bypass demo mode)
-         async function forceRealConnection() {
-             showNotification('🔄 Forcing real database connection...', 'info');
-             
-             try {
-                 // Clear any cached connection status
-                 updateConnectionStatus('connecting', 'Connecting...');
-                 
-                 // Try to load real data directly
-                 await loadRealData();
-                 
-                 showNotification('✅ Real database connection successful!', 'success');
-                 
-             } catch (error) {
-                 console.error('Force connection failed:', error);
-                 await fastReloadAllData();
-             }
-         }
+                   // Force real data connection (bypass demo mode)
+          async function forceRealConnection() {
+              showNotification('🔄 Forcing real database connection...', 'info');
+              
+              try {
+                  // Debug: Check Firebase state
+                  console.log('Debug - Firebase apps:', firebase.apps.length);
+                  console.log('Debug - db defined:', typeof db);
+                  console.log('Debug - auth defined:', typeof auth);
+                  
+                  // Clear any cached connection status
+                  updateConnectionStatus('connecting', 'Connecting...');
+                  
+                  // Try to load real data directly
+                  await loadRealData();
+                  
+                  showNotification('✅ Real database connection successful!', 'success');
+                  
+              } catch (error) {
+                  console.error('Force connection failed:', error);
+                  showNotification('❌ Force connection failed: ' + error.message, 'error');
+                  await fastReloadAllData();
+              }
+          }
+          
+          // Debug function to check Firebase state
+          function debugFirebaseState() {
+              console.log('=== Firebase Debug Info ===');
+              console.log('Firebase apps initialized:', firebase.apps.length);
+              console.log('db variable type:', typeof db);
+              console.log('auth variable type:', typeof auth);
+              console.log('db defined:', db !== undefined);
+              console.log('auth defined:', auth !== undefined);
+              
+              if (db) {
+                  console.log('db.app.name:', db.app.name);
+              }
+              
+              if (auth) {
+                  console.log('auth.app.name:', auth.app.name);
+                  console.log('auth.currentUser:', auth.currentUser);
+              }
+              console.log('=== End Debug Info ===');
+          }
 
                  async function approveTopup(requestId) {
             const request = topupRequests.find(r => r.id === requestId);
