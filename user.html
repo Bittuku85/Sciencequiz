@@ -733,6 +733,9 @@
                         ₹<span id="walletAmount">500</span>
                     </div>
                     <div id="userMenu" style="display: none;">
+                        <button class="modal-btn btn-primary" onclick="fastReloadUserData()" style="padding: 0.5rem 1rem; margin-left: 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-sync-alt"></i> Reload
+                        </button>
                         <button class="modal-btn btn-secondary" onclick="logoutUser()" style="padding: 0.5rem 1rem; margin-left: 0.5rem;">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </button>
@@ -1160,15 +1163,39 @@
 
 
 
-        // Load tournaments from database
+        // Load tournaments from database with caching
         async function loadTournamentsFromDB() {
             try {
+                // First check cache
+                const cachedTournaments = getUserCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    loadAllTournaments();
+                    console.log('⚡ Loaded tournaments from cache');
+                    showNotification('Tournaments loaded from cache!', 'info');
+                    
+                    // Still fetch fresh data in background if cache is old
+                    if (!isValidUserCache('tournaments')) {
+                        loadFreshTournamentsInBackground();
+                    }
+                    return;
+                }
+                
                 console.log('Loading tournaments from database...');
-                const tournamentsSnapshot = await db.collection('tournaments').get();
+                const tournamentsSnapshot = await db.collection('tournaments')
+                    .where('status', '!=', 'cancelled')
+                    .orderBy('datetime', 'asc')
+                    .get();
+                    
                 tournaments = tournamentsSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
+                
+                // Cache the fresh data
+                setUserCacheData('tournaments', tournaments);
+                
                 console.log(`Loaded ${tournaments.length} tournaments`);
                 loadTournaments(); // Update the display
                 loadAllTournaments(); // Update all tournaments display
@@ -1224,8 +1251,224 @@
             }
         }
 
+        // Enhanced datetime utilities for user interface
+        const DateTimeUtils = {
+            getCurrentISO: () => new Date().toISOString(),
+            getCurrentTimestamp: () => firebase.firestore.FieldValue.serverTimestamp(),
+            formatForDisplay: (dateStr) => {
+                const date = new Date(dateStr);
+                return {
+                    date: date.toLocaleDateString('en-IN'),
+                    time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                    full: date.toLocaleString('en-IN')
+                };
+            },
+            getTimeUntilTournament: (dateStr) => {
+                const now = new Date();
+                const tournamentDate = new Date(dateStr);
+                const diffMs = tournamentDate - now;
+                
+                if (diffMs <= 0) return 'Started';
+                
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                
+                if (diffHours > 24) {
+                    const days = Math.floor(diffHours / 24);
+                    return `${days} day${days > 1 ? 's' : ''} left`;
+                }
+                
+                return `${diffHours}h ${diffMins}m left`;
+            },
+            isValidDateTime: (dateStr) => {
+                const date = new Date(dateStr);
+                return !isNaN(date.getTime()) && date > new Date();
+            }
+        };
+
+        // Fast Caching System for User Interface
+        let userCacheStore = {
+            tournaments: null,
+            userProfile: null,
+            registrations: null,
+            lastUpdate: {
+                tournaments: null,
+                userProfile: null,
+                registrations: null
+            }
+        };
+        
+        const USER_CACHE_DURATION = 3 * 60 * 1000; // 3 minutes for user cache
+        
+        function initializeUserCache() {
+            console.log('🚀 Initializing user cache system...');
+            loadUserCacheFromStorage();
+        }
+        
+        function loadUserCacheFromStorage() {
+            try {
+                const cachedData = sessionStorage.getItem('userDataCache');
+                if (cachedData) {
+                    userCacheStore = JSON.parse(cachedData);
+                    console.log('📦 Loaded user cached data from storage');
+                    
+                    // Load cached tournaments immediately for fast display
+                    if (userCacheStore.tournaments && isValidUserCache('tournaments')) {
+                        tournaments = userCacheStore.tournaments;
+                        loadTournaments();
+                        console.log('⚡ Displayed tournaments from user cache');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user cache:', error);
+                clearUserCache();
+            }
+        }
+        
+        function isValidUserCache(dataType) {
+            const lastUpdate = userCacheStore.lastUpdate[dataType];
+            if (!lastUpdate) return false;
+            return (Date.now() - new Date(lastUpdate).getTime()) < USER_CACHE_DURATION;
+        }
+        
+        function setUserCacheData(dataType, data) {
+            userCacheStore[dataType] = data;
+            userCacheStore.lastUpdate[dataType] = new Date().toISOString();
+            
+            // Save to sessionStorage (lighter than localStorage for user session)
+            try {
+                sessionStorage.setItem('userDataCache', JSON.stringify(userCacheStore));
+                console.log(`📊 Cached ${dataType} data for user (${data?.length || 0} items)`);
+            } catch (error) {
+                console.error('Error saving user cache:', error);
+            }
+        }
+        
+        function getUserCacheData(dataType) {
+            if (isValidUserCache(dataType)) {
+                console.log(`⚡ Using cached ${dataType} data for user`);
+                return userCacheStore[dataType];
+            }
+            return null;
+        }
+        
+        function clearUserCache() {
+            userCacheStore = {
+                tournaments: null,
+                userProfile: null,
+                registrations: null,
+                lastUpdate: {
+                    tournaments: null,
+                    userProfile: null,
+                    registrations: null
+                }
+            };
+            sessionStorage.removeItem('userDataCache');
+            console.log('🗑️ User cache cleared');
+        }
+        
+        // Background tournament loading for cache refresh
+        async function loadFreshTournamentsInBackground() {
+            try {
+                console.log('🔄 Refreshing tournaments in background...');
+                const tournamentsSnapshot = await db.collection('tournaments')
+                    .where('status', '!=', 'cancelled')
+                    .orderBy('datetime', 'asc')
+                    .get();
+                    
+                const freshTournaments = tournamentsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                // Update cache with fresh data
+                setUserCacheData('tournaments', freshTournaments);
+                
+                // Update display if data has changed
+                if (JSON.stringify(tournaments) !== JSON.stringify(freshTournaments)) {
+                    tournaments = freshTournaments;
+                    loadTournaments();
+                    loadAllTournaments();
+                    console.log('🔄 Updated tournaments with fresh data');
+                }
+                
+            } catch (error) {
+                console.error('Error refreshing tournaments in background:', error);
+            }
+        }
+        
+        // Fast reload function for user interface
+        async function fastReloadUserData() {
+            showNotification('🚀 Fast reloading data...', 'info');
+            
+            try {
+                // Clear cache and reload fresh data
+                clearUserCache();
+                
+                // Load tournaments with caching
+                await loadTournamentsFromDB();
+                
+                // Reload user profile if logged in
+                if (auth.currentUser) {
+                    try {
+                        const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+                        if (userDoc.exists) {
+                            setUserCacheData('userProfile', userDoc.data());
+                            updateWalletDisplay(userDoc.data().walletBalance || 0);
+                        }
+                    } catch (error) {
+                        console.error('Error reloading user profile:', error);
+                    }
+                }
+                
+                showNotification('✅ Data reloaded successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error in fast reload:', error);
+                showNotification('❌ Error reloading data', 'error');
+            }
+        }
+        
+        // Enhanced tournament loading with cache
+        async function loadTournamentsFromDBWithCache() {
+            try {
+                // First check cache
+                const cachedTournaments = getUserCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    return;
+                }
+                
+                // Load from database if not in cache
+                console.log('Loading tournaments from database for user...');
+                const snapshot = await db.collection('tournaments')
+                    .where('status', '!=', 'cancelled')
+                    .orderBy('datetime', 'asc')
+                    .get();
+                
+                tournaments = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                // Cache the data
+                setUserCacheData('tournaments', tournaments);
+                loadTournaments();
+                
+                console.log(`Loaded and cached ${tournaments.length} tournaments for user`);
+                
+            } catch (error) {
+                console.error('Error loading tournaments for user:', error);
+                // Fallback to empty array
+                tournaments = [];
+                loadTournaments();
+            }
+        }
+
         // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
+            initializeUserCache();
             initializeApp();
         });
 

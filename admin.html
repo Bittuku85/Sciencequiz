@@ -758,11 +758,15 @@
                  <i class="fas fa-money-bill"></i>
                  Topup Requests
              </button>
-             <button class="nav-item" onclick="showSection('settings')">
-                 <i class="fas fa-cog"></i>
-                 Settings
-             </button>
-             <button class="nav-item" onclick="adminLogout()" style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                             <button class="nav-item" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </button>
+                <button class="nav-item" onclick="fastReloadAllData()" style="margin-top: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+                    <i class="fas fa-sync-alt"></i>
+                    Fast Reload
+                </button>
+                <button class="nav-item" onclick="adminLogout()" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                  <i class="fas fa-sign-out-alt"></i>
                  Logout
              </button>
@@ -1380,12 +1384,284 @@
 
 
 
+        // Fast Caching System for Performance Optimization
+        let cacheStore = {
+            tournaments: null,
+            users: null,
+            topupRequests: null,
+            settings: null,
+            lastUpdate: {
+                tournaments: null,
+                users: null,
+                topupRequests: null,
+                settings: null
+            }
+        };
+        
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        
+        function initializeCacheSystem() {
+            console.log('🚀 Initializing fast cache system...');
+            loadCacheFromStorage();
+        }
+        
+        function loadCacheFromStorage() {
+            try {
+                const cachedData = localStorage.getItem('adminDataCache');
+                if (cachedData) {
+                    cacheStore = JSON.parse(cachedData);
+                    console.log('📦 Loaded cached data from storage');
+                    
+                    // Load cached data to UI immediately for fast display
+                    if (cacheStore.tournaments && isValidCache('tournaments')) {
+                        displayTournamentsFromCache();
+                    }
+                    if (cacheStore.users && isValidCache('users')) {
+                        updateUserStats();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading cache:', error);
+                clearCache();
+            }
+        }
+        
+        function isValidCache(dataType) {
+            const lastUpdate = cacheStore.lastUpdate[dataType];
+            if (!lastUpdate) return false;
+            return (Date.now() - new Date(lastUpdate).getTime()) < CACHE_DURATION;
+        }
+        
+        function setCacheData(dataType, data) {
+            cacheStore[dataType] = data;
+            cacheStore.lastUpdate[dataType] = new Date().toISOString();
+            
+            // Save to localStorage
+            try {
+                localStorage.setItem('adminDataCache', JSON.stringify(cacheStore));
+                console.log(`📊 Cached ${dataType} data (${data.length} items)`);
+            } catch (error) {
+                console.error('Error saving cache:', error);
+            }
+        }
+        
+        function getCacheData(dataType) {
+            if (isValidCache(dataType)) {
+                console.log(`⚡ Using cached ${dataType} data`);
+                return cacheStore[dataType];
+            }
+            return null;
+        }
+        
+        function clearCache() {
+            cacheStore = {
+                tournaments: null,
+                users: null,
+                topupRequests: null,
+                settings: null,
+                lastUpdate: {
+                    tournaments: null,
+                    users: null,
+                    topupRequests: null,
+                    settings: null
+                }
+            };
+            localStorage.removeItem('adminDataCache');
+            console.log('🗑️ Cache cleared');
+        }
+        
+        function displayTournamentsFromCache() {
+            if (cacheStore.tournaments) {
+                window.tournaments = cacheStore.tournaments;
+                displayTournaments(cacheStore.tournaments);
+                console.log('⚡ Displayed tournaments from cache');
+            }
+        }
+        
+        // Fast reload function for both admin and user data
+        async function fastReloadData() {
+            const loadingMessage = showNotification('🔄 Fast reloading data...', 'info');
+            
+            try {
+                // Load from cache first for immediate display
+                displayTournamentsFromCache();
+                
+                // Then fetch fresh data in parallel
+                const promises = [];
+                
+                if (!isValidCache('tournaments')) {
+                    promises.push(loadTournamentsWithCache());
+                }
+                if (!isValidCache('users')) {
+                    promises.push(loadUsersWithCache());
+                }
+                if (!isValidCache('topupRequests')) {
+                    promises.push(loadTopupRequestsWithCache());
+                }
+                if (!isValidCache('settings')) {
+                    promises.push(loadSettingsWithCache());
+                }
+                
+                // Wait for all data to load
+                await Promise.all(promises);
+                
+                showNotification('✅ Data reloaded successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error in fast reload:', error);
+                showNotification('❌ Error reloading data', 'error');
+            }
+        }
+        
+        // Enhanced datetime utilities for both admin and user
+        const DateTimeUtils = {
+            getCurrentISO: () => new Date().toISOString(),
+            getCurrentTimestamp: () => firebase.firestore.FieldValue.serverTimestamp(),
+            formatForDisplay: (dateStr) => {
+                const date = new Date(dateStr);
+                return {
+                    date: date.toLocaleDateString('en-IN'),
+                    time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                    full: date.toLocaleString('en-IN')
+                };
+            },
+            getDefaultTournamentTime: () => {
+                const now = new Date();
+                now.setHours(now.getHours() + 1);
+                return now.toISOString().slice(0, 16);
+            },
+            isValidDateTime: (dateStr) => {
+                const date = new Date(dateStr);
+                return !isNaN(date.getTime()) && date > new Date();
+            }
+        };
+
+        // Fast Caching System for Performance Optimization
+        let cacheStore = {
+            tournaments: null,
+            users: null,
+            topupRequests: null,
+            settings: null,
+            lastUpdate: {
+                tournaments: null,
+                users: null,
+                topupRequests: null,
+                settings: null
+            }
+        };
+        
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        
+        function initializeCacheSystem() {
+            console.log('🚀 Initializing fast cache system...');
+            loadCacheFromStorage();
+        }
+        
+        function loadCacheFromStorage() {
+            try {
+                const cachedData = localStorage.getItem('adminDataCache');
+                if (cachedData) {
+                    cacheStore = JSON.parse(cachedData);
+                    console.log('📦 Loaded cached data from storage');
+                    
+                    // Load cached data to UI immediately for fast display
+                    if (cacheStore.tournaments && isValidCache('tournaments')) {
+                        displayTournamentsFromCache();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading cache:', error);
+                clearCache();
+            }
+        }
+        
+        function isValidCache(dataType) {
+            const lastUpdate = cacheStore.lastUpdate[dataType];
+            if (!lastUpdate) return false;
+            return (Date.now() - new Date(lastUpdate).getTime()) < CACHE_DURATION;
+        }
+        
+        function setCacheData(dataType, data) {
+            cacheStore[dataType] = data;
+            cacheStore.lastUpdate[dataType] = new Date().toISOString();
+            
+            // Save to localStorage
+            try {
+                localStorage.setItem('adminDataCache', JSON.stringify(cacheStore));
+                console.log(`📊 Cached ${dataType} data (${data?.length || 0} items)`);
+            } catch (error) {
+                console.error('Error saving cache:', error);
+            }
+        }
+        
+        function getCacheData(dataType) {
+            if (isValidCache(dataType)) {
+                console.log(`⚡ Using cached ${dataType} data`);
+                return cacheStore[dataType];
+            }
+            return null;
+        }
+        
+        function clearCache() {
+            cacheStore = {
+                tournaments: null,
+                users: null,
+                topupRequests: null,
+                settings: null,
+                lastUpdate: {
+                    tournaments: null,
+                    users: null,
+                    topupRequests: null,
+                    settings: null
+                }
+            };
+            localStorage.removeItem('adminDataCache');
+            console.log('🗑️ Cache cleared');
+        }
+        
+        function displayTournamentsFromCache() {
+            if (cacheStore.tournaments) {
+                window.tournaments = cacheStore.tournaments;
+                displayTournaments(cacheStore.tournaments);
+                console.log('⚡ Displayed tournaments from cache');
+            }
+        }
+        
+        // Fast reload function for both admin and user data
+        async function fastReloadData() {
+            showNotification('🔄 Fast reloading data...', 'info');
+            
+            try {
+                // Load from cache first for immediate display
+                displayTournamentsFromCache();
+                
+                // Then fetch fresh data in parallel
+                const promises = [];
+                
+                if (!isValidCache('tournaments')) {
+                    promises.push(loadTournamentsWithCache());
+                }
+                
+                // Wait for all data to load
+                await Promise.all(promises);
+                
+                showNotification('✅ Data reloaded successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error in fast reload:', error);
+                showNotification('❌ Error reloading data', 'error');
+            }
+        }
+
         // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
         });
 
                          function initializeApp() {
+            // Initialize fast caching system
+            initializeCacheSystem();
+            
             // Check for stored admin session first
             const storedAdmin = localStorage.getItem('adminSession');
             if (storedAdmin) {
@@ -1758,6 +2034,90 @@
                 }
             } catch (error) {
                 console.log('Note: Could not create admin record in database (offline mode)');
+            }
+        }
+        
+        // Enhanced data loading with caching for speed
+        async function loadTournamentsWithCache() {
+            try {
+                // First check cache
+                const cachedTournaments = getCacheData('tournaments');
+                if (cachedTournaments) {
+                    tournaments = cachedTournaments;
+                    loadTournaments();
+                    return;
+                }
+                
+                // Load from database if not in cache
+                console.log('Loading tournaments from database...');
+                const tournamentsSnapshot = await db.collection('tournaments').orderBy('datetime', 'desc').get();
+                
+                tournaments = tournamentsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                // Cache the data
+                setCacheData('tournaments', tournaments);
+                loadTournaments();
+                
+                console.log(`Loaded and cached ${tournaments.length} tournaments`);
+                
+            } catch (error) {
+                console.error('Error loading tournaments:', error);
+                loadMockData();
+            }
+        }
+        
+        async function loadUsersWithCache() {
+            try {
+                const cachedUsers = getCacheData('users');
+                if (cachedUsers) {
+                    players = cachedUsers;
+                    updateUserStats();
+                    return;
+                }
+                
+                console.log('Loading users from database...');
+                const usersSnapshot = await db.collection('users').get();
+                
+                players = usersSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                setCacheData('users', players);
+                updateUserStats();
+                
+                console.log(`Loaded and cached ${players.length} users`);
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+        
+        async function loadTopupRequestsWithCache() {
+            try {
+                const cachedRequests = getCacheData('topupRequests');
+                if (cachedRequests) {
+                    topupRequests = cachedRequests;
+                    return;
+                }
+                
+                console.log('Loading topup requests from database...');
+                const topupsSnapshot = await db.collection('topupRequests').get();
+                
+                topupRequests = topupsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                setCacheData('topupRequests', topupRequests);
+                
+                console.log(`Loaded and cached ${topupRequests.length} topup requests`);
+                
+            } catch (error) {
+                console.error('Error loading topup requests:', error);
             }
         }
 
@@ -2292,9 +2652,41 @@
          }
 
          function refreshTopupRequests() {
+             // Clear cache and reload with fresh data
+             clearCache();
              syncTopupRequests();
              loadTopupRequests();
              showNotification('Topup requests refreshed!', 'success');
+         }
+         
+         // Enhanced fast reload function for admin interface
+         async function fastReloadAllData() {
+             showNotification('🚀 Fast reloading all data...', 'info');
+             
+             try {
+                 // Load from cache first for immediate display
+                 displayTournamentsFromCache();
+                 
+                 // Then reload fresh data in parallel
+                 const promises = [
+                     loadTournamentsWithCache(),
+                     loadUsersWithCache(),
+                     loadTopupRequestsWithCache()
+                 ];
+                 
+                 await Promise.all(promises);
+                 
+                 // Update all displays
+                 loadTournaments();
+                 updateUserStats();
+                 updateRealTimeStats();
+                 
+                 showNotification('✅ All data reloaded successfully!', 'success');
+                 
+             } catch (error) {
+                 console.error('Error in fast reload:', error);
+                 showNotification('❌ Error reloading data', 'error');
+             }
          }
 
                  async function approveTopup(requestId) {
