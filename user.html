@@ -1135,10 +1135,12 @@
         };
 
         // Initialize Firebase with error handling
+        let db, auth; // Global variables for Firebase services
+        
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
             console.log('Firebase initialized successfully');
             
