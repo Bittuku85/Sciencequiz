@@ -2,18 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Tournament Arena - Play & Earn</title>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Russo+One:wght@400&display=swap" rel="stylesheet">
-    
-    <!-- External Libraries -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire Tournaments</title>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg-primary: #F8FAFC;
@@ -23,8 +15,11 @@
             --accent-gold: #FBBF24;
             --accent-red: #DC2626;
             --border: #CBD5E1;
-            --success-green: #059669;
-            --shadow: rgba(0, 0, 0, 0.1);
+            --success-green: #10B981;
+            --gradient-primary: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%);
+            --gradient-gold: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+            --shadow-light: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-medium: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         * {
@@ -34,69 +29,86 @@
         }
 
         body {
-            font-family: 'Russo One', sans-serif;
+            font-family: 'Inter', sans-serif;
             background: var(--bg-primary);
             color: var(--text-dark);
+            line-height: 1.6;
             overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
         }
 
-        .container {
+        .app-container {
             max-width: 100vw;
-            margin: 0 auto;
-            padding: 0;
             min-height: 100vh;
+            position: relative;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, var(--accent-blue), #1D4ED8);
+            background: var(--gradient-primary);
             color: white;
             padding: 1rem;
             position: sticky;
             top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 10px var(--shadow);
+            z-index: 100;
+            box-shadow: var(--shadow-medium);
         }
 
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .wallet-balance {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
+        .header-actions {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
+        .logo {
+            font-family: 'Russo One', sans-serif;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .wallet-balance {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-balance:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
         /* Navigation */
         .nav-tabs {
-            display: flex;
             background: white;
+            display: flex;
             border-bottom: 1px solid var(--border);
             position: sticky;
             top: 70px;
-            z-index: 999;
+            z-index: 99;
         }
 
         .nav-tab {
             flex: 1;
             padding: 1rem;
             text-align: center;
-            background: none;
             border: none;
+            background: none;
             cursor: pointer;
+            font-weight: 500;
             transition: all 0.3s ease;
             border-bottom: 3px solid transparent;
         }
@@ -104,35 +116,30 @@
         .nav-tab.active {
             color: var(--accent-blue);
             border-bottom-color: var(--accent-blue);
-            background: rgba(37, 99, 235, 0.05);
         }
 
         /* Content Sections */
         .content {
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 1rem;
         }
 
         .section {
             display: none;
-            animation: fadeIn 0.3s ease;
         }
 
         .section.active {
             display: block;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         /* Hero Section */
         .hero {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-gold));
+            background: var(--gradient-primary);
             color: white;
             padding: 2rem 1rem;
             text-align: center;
-            border-radius: 15px;
+            border-radius: 12px;
             margin-bottom: 2rem;
             position: relative;
             overflow: hidden;
@@ -141,120 +148,108 @@
         .hero::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+            opacity: 0.3;
         }
 
         .hero-content {
             position: relative;
-            z-index: 2;
+            z-index: 1;
         }
 
         .hero h1 {
+            font-family: 'Russo One', sans-serif;
             font-size: 2rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
         }
 
         .hero p {
-            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
             opacity: 0.9;
         }
 
-        /* Buttons */
-        .btn {
-            padding: 0.75rem 1.5rem;
+        .cta-button {
+            background: var(--gradient-gold);
+            color: var(--text-dark);
+            padding: 1rem 2rem;
             border: none;
             border-radius: 25px;
+            font-weight: 700;
+            font-size: 1.1rem;
             cursor: pointer;
-            font-family: inherit;
-            font-weight: bold;
             transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
+            box-shadow: var(--shadow-medium);
         }
 
-        .btn-primary {
-            background: var(--accent-blue);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #1D4ED8;
+        .cta-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
-        }
-
-        .btn-gold {
-            background: var(--accent-gold);
-            color: var(--text-dark);
-        }
-
-        .btn-success {
-            background: var(--success-green);
-            color: white;
-        }
-
-        .btn-danger {
-            background: var(--accent-red);
-            color: white;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
         /* Tournament Cards */
         .tournaments-grid {
             display: grid;
-            gap: 1rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
         }
 
         .tournament-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             padding: 1.5rem;
-            box-shadow: 0 5px 15px var(--shadow);
+            box-shadow: var(--shadow-light);
             border: 1px solid var(--border);
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .tournament-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
         }
 
         .tournament-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 1rem;
         }
 
         .tournament-title {
+            font-family: 'Russo One', sans-serif;
             font-size: 1.2rem;
             color: var(--text-dark);
         }
 
-        .tournament-prize {
+        .tournament-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-live {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .status-upcoming {
             background: var(--accent-gold);
             color: var(--text-dark);
-            padding: 0.25rem 0.75rem;
-            border-radius: 15px;
-            font-size: 0.9rem;
-            font-weight: bold;
         }
 
         .tournament-details {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .detail-item {
@@ -264,126 +259,180 @@
             font-size: 0.9rem;
         }
 
-        .tournament-progress {
-            margin-bottom: 1rem;
+        .detail-icon {
+            color: var(--accent-blue);
         }
 
-        .progress-bar {
-            background: var(--bg-secondary);
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            background: var(--accent-blue);
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-
-        .progress-text {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 0.5rem;
-        }
-
-        /* Tab Filters */
-        .tab-filters {
+        .tournament-footer {
             display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .tab-filter {
-            padding: 0.5rem 1rem;
-            border: 1px solid var(--border);
+        .prize-amount {
+            font-family: 'Russo One', sans-serif;
+            font-size: 1.3rem;
+            color: var(--accent-gold);
+        }
+
+        .join-button {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
             border-radius: 20px;
-            background: white;
+            font-weight: 600;
             cursor: pointer;
-            white-space: nowrap;
             transition: all 0.3s ease;
         }
 
-        .tab-filter.active {
-            background: var(--accent-blue);
-            color: white;
-            border-color: var(--accent-blue);
+        .join-button:hover {
+            transform: scale(1.05);
+        }
+
+        .join-button:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            transform: none;
         }
 
         /* Referral Section */
-        .referral-card {
-            background: linear-gradient(135deg, var(--accent-gold), #F59E0B);
-            color: var(--text-dark);
+        .referral-section {
+            background: white;
+            border-radius: 12px;
             padding: 2rem;
-            border-radius: 15px;
+            box-shadow: var(--shadow-light);
+            margin-bottom: 2rem;
+        }
+
+        .referral-header {
             text-align: center;
             margin-bottom: 2rem;
         }
 
-        .referral-code {
-            background: rgba(255, 255, 255, 0.9);
+        .referral-title {
+            font-family: 'Russo One', sans-serif;
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .referral-subtitle {
+            color: #64748B;
+        }
+
+        .referral-code-section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
             padding: 1rem;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin: 1rem 0;
-            letter-spacing: 2px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .referral-code {
+            font-family: 'Russo One', sans-serif;
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+        }
+
+        .copy-code-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
         }
 
         .share-buttons {
             display: flex;
             gap: 1rem;
             justify-content: center;
-            margin-top: 1rem;
+            flex-wrap: wrap;
         }
 
         .share-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: center;
-            transition: transform 0.3s ease;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
-        .share-btn:hover {
-            transform: scale(1.1);
+        .whatsapp-btn {
+            background: #25D366;
+            color: white;
         }
 
-        .whatsapp { background: #25D366; }
-        .telegram { background: #0088CC; }
-        .copy { background: var(--bg-secondary); }
+        .telegram-btn {
+            background: #0088CC;
+            color: white;
+        }
+
+        .link-btn {
+            background: var(--border);
+            color: var(--text-dark);
+        }
+
+        .earnings-display {
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--gradient-gold);
+            border-radius: 8px;
+            color: var(--text-dark);
+        }
+
+        .earnings-amount {
+            font-family: 'Russo One', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
 
         /* Profile Section */
-        .profile-card {
+        .profile-section {
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             padding: 2rem;
-            box-shadow: 0 5px 15px var(--shadow);
-            text-align: center;
-            margin-bottom: 2rem;
+            box-shadow: var(--shadow-light);
         }
 
-        .profile-avatar {
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .avatar {
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: var(--accent-blue);
-            color: white;
+            background: var(--gradient-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 2rem;
-            margin: 0 auto 1rem;
+            color: white;
+            font-weight: 700;
         }
 
-        .profile-info {
-            margin-bottom: 2rem;
+        .profile-info h3 {
+            font-family: 'Russo One', sans-serif;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-uid {
+            color: #64748B;
+            font-size: 0.9rem;
         }
 
         .profile-stats {
@@ -396,14 +445,47 @@
         .stat-card {
             background: var(--bg-secondary);
             padding: 1rem;
-            border-radius: 10px;
+            border-radius: 8px;
             text-align: center;
         }
 
-        .stat-number {
+        .stat-value {
+            font-family: 'Russo One', sans-serif;
             font-size: 1.5rem;
-            font-weight: bold;
             color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #64748B;
+        }
+
+        .profile-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .topup-btn {
+            background: var(--gradient-gold);
+            color: var(--text-dark);
+        }
+
+        .registrations-btn {
+            background: var(--accent-blue);
+            color: white;
         }
 
         /* Modal Styles */
@@ -414,36 +496,27 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10000;
-            animation: modalFadeIn 0.3s ease;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
         }
 
         .modal.active {
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            padding: 1rem;
         }
 
         .modal-content {
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             padding: 2rem;
-            width: 90%;
             max-width: 400px;
-            max-height: 80vh;
+            width: 100%;
+            max-height: 90vh;
             overflow-y: auto;
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            position: relative;
         }
 
         .modal-header {
@@ -455,318 +528,598 @@
             border-bottom: 1px solid var(--border);
         }
 
+        .modal-title {
+            font-family: 'Russo One', sans-serif;
+            font-size: 1.3rem;
+        }
+
         .close-btn {
             background: none;
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
-            color: #666;
+            color: #64748B;
         }
 
         .form-group {
             margin-bottom: 1rem;
         }
 
-        .form-group label {
+        .form-label {
             display: block;
             margin-bottom: 0.5rem;
-            font-weight: bold;
+            font-weight: 600;
+            color: var(--text-dark);
         }
 
-        .form-group input {
+        .form-input {
             width: 100%;
             padding: 0.75rem;
             border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
             border-radius: 8px;
-            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        /* Loading Spinner */
-        .spinner {
-            border: 3px solid var(--bg-secondary);
-            border-top: 3px solid var(--accent-blue);
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Toast Notifications */
-        .toast {
-            position: fixed;
-            top: 100px;
-            right: 1rem;
-            background: var(--success-green);
+        .btn-primary {
+            background: var(--accent-blue);
             color: white;
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text-dark);
+        }
+
+        /* Payment QR Section */
+        .qr-section {
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .qr-code {
+            width: 220px;
+            height: auto;
+            min-height: 200px;
+            margin: 0 auto 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            padding: 10px;
+        }
+
+        .qr-code canvas {
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .upi-info {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
             padding: 1rem 1.5rem;
-            border-radius: 10px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1001;
             transform: translateX(100%);
             transition: transform 0.3s ease;
-            z-index: 10001;
         }
 
-        .toast.show {
+        .notification.show {
             transform: translateX(0);
         }
 
-        .toast.error {
+        .notification.success {
+            background: var(--success-green);
+        }
+
+        .notification.error {
             background: var(--accent-red);
         }
 
         /* Responsive Design */
-        @media (min-width: 768px) {
-            .container {
-                max-width: 1200px;
-                padding: 0 2rem;
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 0 0.5rem;
             }
-            
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .hero h1 {
+                font-size: 1.5rem;
+            }
+
             .tournaments-grid {
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                grid-template-columns: 1fr;
             }
-            
+
+            .tournament-details {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-actions {
+                flex-direction: column;
+            }
+
+            .action-btn {
+                min-width: auto;
+            }
+
             .share-buttons {
-                gap: 2rem;
+                flex-direction: column;
             }
         }
 
-        /* Utility Classes */
-        .text-center { text-align: center; }
-        .text-small { font-size: 0.9rem; }
-        .mb-1 { margin-bottom: 1rem; }
-        .mb-2 { margin-bottom: 2rem; }
-        .flex { display: flex; }
-        .flex-between { justify-content: space-between; }
-        .flex-center { justify-content: center; align-items: center; }
-        .gap-1 { gap: 1rem; }
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pulse Animation */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="app-container">
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <div class="logo">🏆 Tournament Arena</div>
-                <div class="wallet-balance" onclick="openTopUpModal()">
-                    <span>💰</span>
-                    <span id="walletAmount">₹500</span>
+                <div class="logo">
+                    <i class="fas fa-trophy"></i>
+                    FF Tournaments
+                </div>
+                <div class="header-actions">
+                    <!-- Logged In User -->
+                    <div id="userSection" class="wallet-balance" style="display: none;" onclick="openTopupModal()">
+                        <i class="fas fa-wallet"></i>
+                        ₹<span id="walletAmount">500</span>
+                    </div>
+                    <div id="userMenu" style="display: none;">
+                        <button class="modal-btn btn-secondary" onclick="logoutUser()" style="padding: 0.5rem 1rem; margin-left: 0.5rem;">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    
+                    <!-- Guest User -->
+                    <div id="guestSection" class="header-actions">
+                        <button class="modal-btn btn-primary" onclick="openLoginModal()" style="padding: 0.5rem 1rem; margin-right: 0.5rem;">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <button class="modal-btn btn-secondary" onclick="openRegisterModal()" style="padding: 0.5rem 1rem;">
+                            <i class="fas fa-user-plus"></i> Register
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
+        <!-- Navigation -->
         <nav class="nav-tabs">
-            <button class="nav-tab active" onclick="showSection('home')">🏠 Home</button>
-            <button class="nav-tab" onclick="showSection('tournaments')">🎮 Tournaments</button>
-            <button class="nav-tab" onclick="showSection('referral')">💎 Refer</button>
-            <button class="nav-tab" onclick="showSection('profile')">👤 Profile</button>
+            <button class="nav-tab active" onclick="showSection('home')">
+                <i class="fas fa-home"></i> Home
+            </button>
+            <button class="nav-tab" onclick="showSection('tournaments')">
+                <i class="fas fa-gamepad"></i> Tournaments
+            </button>
+            <button class="nav-tab" onclick="showSection('referral')">
+                <i class="fas fa-users"></i> Refer & Earn
+            </button>
+            <button class="nav-tab" onclick="showSection('profile')">
+                <i class="fas fa-user"></i> Profile
+            </button>
         </nav>
 
-        <!-- Content Sections -->
-        <main class="content">
+        <div class="content">
             <!-- Home Section -->
             <section id="home" class="section active">
                 <div class="hero">
                     <div class="hero-content">
-                        <h1>🔥 Free Fire Tournaments</h1>
-                        <p>Join epic battles, win real cash prizes!</p>
-                        <button class="btn btn-gold" onclick="showSection('tournaments')">
-                            ⚡ Play Now
+                        <h1>Free Fire Tournaments</h1>
+                        <p>Join elite tournaments, earn real money, and climb the leaderboards!</p>
+                        <button class="cta-button pulse" onclick="showSection('tournaments')">
+                            <i class="fas fa-play"></i> Play Now
                         </button>
                     </div>
                 </div>
 
-                <div class="tournaments-grid" id="featuredTournaments">
-                    <!-- Featured tournaments will be loaded here -->
+                <div class="tournaments-grid" id="liveTournaments">
+                    <!-- Live tournaments will be populated here -->
                 </div>
             </section>
 
             <!-- Tournaments Section -->
             <section id="tournaments" class="section">
-                <div class="tab-filters">
-                    <button class="tab-filter active" onclick="filterTournaments('live')">🔴 Live</button>
-                    <button class="tab-filter" onclick="filterTournaments('upcoming')">⏰ Upcoming</button>
-                    <button class="tab-filter" onclick="filterTournaments('past')">📊 Past</button>
+                <div class="tournament-tabs" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <button class="nav-tab active" onclick="filterTournaments('live')">Live</button>
+                    <button class="nav-tab" onclick="filterTournaments('upcoming')">Upcoming</button>
+                    <button class="nav-tab" onclick="filterTournaments('past')">Past</button>
                 </div>
-
+                
                 <div class="tournaments-grid" id="allTournaments">
-                    <!-- All tournaments will be loaded here -->
+                    <!-- All tournaments will be populated here -->
                 </div>
             </section>
 
             <!-- Referral Section -->
             <section id="referral" class="section">
-                <div class="referral-card">
-                    <h2>🎁 Refer & Earn</h2>
-                    <p>Invite friends and earn ₹50 for each signup!</p>
-                    
-                    <div class="referral-code" id="referralCode">
-                        REF2025ABC
+                <div class="referral-section">
+                    <div class="referral-header">
+                        <h2 class="referral-title">Refer & Earn</h2>
+                        <p class="referral-subtitle">Invite friends and earn ₹50 for each successful referral!</p>
                     </div>
-                    
-                    <div class="share-buttons">
-                        <button class="share-btn whatsapp" onclick="shareWhatsApp()">
-                            📱
-                        </button>
-                        <button class="share-btn telegram" onclick="shareTelegram()">
-                            ✈️
-                        </button>
-                        <button class="share-btn copy" onclick="copyReferralCode()">
-                            📋
-                        </button>
-                    </div>
-                </div>
 
-                <div class="profile-stats">
-                    <div class="stat-card">
-                        <div class="stat-number" id="referralCount">0</div>
-                        <div>Friends Referred</div>
+                    <div class="referral-code-section">
+                        <div class="referral-code" id="userReferralCode">FF2025REF</div>
+                        <button class="copy-code-btn" onclick="copyReferralCode()">
+                            <i class="fas fa-copy"></i> Copy Code
+                        </button>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="referralEarnings">₹0</div>
-                        <div>Total Earned</div>
+
+                    <div class="share-buttons">
+                        <button class="share-btn whatsapp-btn" onclick="shareOnWhatsApp()">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </button>
+                        <button class="share-btn telegram-btn" onclick="shareOnTelegram()">
+                            <i class="fab fa-telegram"></i> Telegram
+                        </button>
+                        <button class="share-btn link-btn" onclick="copyReferralLink()">
+                            <i class="fas fa-link"></i> Copy Link
+                        </button>
+                    </div>
+
+                    <div class="earnings-display">
+                        <div class="earnings-amount">₹<span id="referralEarnings">150</span></div>
+                        <div>Total Referral Earnings</div>
                     </div>
                 </div>
             </section>
 
             <!-- Profile Section -->
             <section id="profile" class="section">
-                <div class="profile-card">
-                    <div class="profile-avatar" id="profileAvatar">
-                        U
+                <div class="profile-section">
+                    <div class="profile-header">
+                        <div class="avatar">R</div>
+                        <div class="profile-info">
+                            <h3 id="userName">Rohan Sharma</h3>
+                            <div class="profile-uid">UID: <span id="userUID">987654321</span></div>
+                        </div>
                     </div>
-                    <div class="profile-info">
-                        <h2 id="playerName">Unknown Player</h2>
-                        <p class="text-small">Free Fire UID: <span id="playerUID">Not Set</span></p>
-                    </div>
-                    
+
                     <div class="profile-stats">
                         <div class="stat-card">
-                            <div class="stat-number" id="tournamentsJoined">0</div>
-                            <div>Tournaments Joined</div>
+                            <div class="stat-value" id="tournamentsJoined">12</div>
+                            <div class="stat-label">Tournaments Joined</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number" id="totalWinnings">₹0</div>
-                            <div>Total Winnings</div>
+                            <div class="stat-value" id="totalWinnings">₹2,500</div>
+                            <div class="stat-label">Total Winnings</div>
                         </div>
                     </div>
 
-                    <div class="flex gap-1 mb-2">
-                        <button class="btn btn-primary" onclick="openTopUpModal()">
-                            💰 Top Up Wallet
+                    <div class="profile-actions">
+                        <button class="action-btn topup-btn" onclick="openTopupModal()">
+                            <i class="fas fa-plus"></i> Top-up Wallet
                         </button>
-                        <button class="btn btn-primary" onclick="openEditProfileModal()">
-                            ✏️ Edit Profile
+                        <button class="action-btn registrations-btn" onclick="openRegistrationsModal()">
+                            <i class="fas fa-list"></i> My Registrations
                         </button>
                     </div>
-
-                    <button class="btn btn-primary" onclick="showMyRegistrations()">
-                        📋 My Registrations
-                    </button>
                 </div>
             </section>
-        </main>
+        </div>
 
         <!-- Tournament Registration Modal -->
         <div id="registrationModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Join Tournament</h3>
+                    <h3 class="modal-title">Join Tournament</h3>
                     <button class="close-btn" onclick="closeModal('registrationModal')">&times;</button>
                 </div>
                 
-                <div id="tournamentDetails">
-                    <!-- Tournament details will be populated here -->
-                </div>
+                <div id="tournamentDetails"></div>
                 
                 <form id="registrationForm">
                     <div class="form-group">
-                        <label for="playerNameInput">Player Name</label>
-                        <input type="text" id="playerNameInput" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="freeFireUID">Free Fire UID</label>
-                        <input type="text" id="freeFireUID" required>
+                        <label class="form-label">Player Name</label>
+                        <input type="text" class="form-input" id="playerName" value="Rohan Sharma" required>
                     </div>
                     
-                    <div class="flex gap-1">
-                        <button type="button" class="btn btn-primary" onclick="closeModal('registrationModal')">
-                            Cancel
-                        </button>
-                        <button type="submit" class="btn btn-success">
-                            Pay & Join
-                        </button>
+                    <div class="form-group">
+                        <label class="form-label">Free Fire UID</label>
+                        <input type="text" class="form-input" id="playerUID" value="987654321" required>
                     </div>
                 </form>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn btn-secondary" onclick="closeModal('registrationModal')">Cancel</button>
+                    <button class="modal-btn btn-primary" onclick="processTournamentJoin()">
+                        <span id="joinBtnText">Pay & Join</span>
+                        <span id="joinBtnLoader" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Top Up Modal -->
-        <div id="topUpModal" class="modal">
+        <!-- Top-up Modal -->
+        <div id="topupModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Top Up Wallet</h3>
-                    <button class="close-btn" onclick="closeModal('topUpModal')">&times;</button>
+                    <h3 class="modal-title">Top-up Wallet</h3>
+                    <button class="close-btn" onclick="closeModal('topupModal')">&times;</button>
                 </div>
                 
                 <div class="form-group">
-                    <label>Select Amount</label>
-                    <div class="flex gap-1 mb-1" style="flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="selectAmount(100)">₹100</button>
-                        <button class="btn btn-primary" onclick="selectAmount(250)">₹250</button>
-                        <button class="btn btn-primary" onclick="selectAmount(500)">₹500</button>
-                        <button class="btn btn-primary" onclick="selectAmount(1000)">₹1000</button>
-                    </div>
-                    <input type="number" id="customAmount" placeholder="Enter custom amount" min="50" max="10000">
+                    <label class="form-label">Amount (₹)</label>
+                    <input type="number" class="form-input" id="topupAmount" placeholder="Enter amount" min="50" step="1" max="50000">
+                    <small style="color: #64748B; font-size: 0.8rem; margin-top: 0.5rem; display: block;">
+                        Minimum: ₹50 | Maximum: ₹50,000
+                    </small>
                 </div>
                 
-                <button class="btn btn-success" onclick="processTopUp()">
-                    💳 Pay Now
+                <div class="qr-section" id="qrSection" style="display: none;">
+                    <div class="qr-code">
+                        <i class="fas fa-qrcode" style="font-size: 3rem; color: #64748B;"></i>
+                    </div>
+                                    <div class="upi-info">
+                    <strong>UPI ID:</strong> Bittukr@fam<br>
+                    <strong>Amount:</strong> ₹<span id="qrAmount">0</span><br>
+                    <strong>Note:</strong> Wallet Topup
+                </div>
+                <p style="font-size: 0.9rem; color: #64748B;">Scan QR code or use UPI ID to pay</p>
+                
+                <div id="orderIdSection" style="display: none; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Enter Transaction/Order ID</label>
+                        <input type="text" class="form-input" id="orderIdInput" placeholder="Enter transaction ID from UPI app" required>
+                    </div>
+                    <button class="modal-btn btn-success" onclick="submitTopupRequest()" style="width: 100%;">
+                        <i class="fas fa-check"></i> Submit Topup Request
+                    </button>
+                </div>
+            </div>
+            
+            <div class="modal-footer" id="topupModalFooter">
+                <button class="modal-btn btn-secondary" onclick="closeModal('topupModal')">Cancel</button>
+                <button class="modal-btn btn-primary" onclick="generatePaymentQR()">Generate QR</button>
+                <button class="modal-btn btn-warning" onclick="showOrderIdSection()" style="display: none;" id="paidBtn">
+                    <i class="fas fa-money-bill"></i> I Have Paid
                 </button>
+            </div>
             </div>
         </div>
 
-        <!-- Edit Profile Modal -->
-        <div id="editProfileModal" class="modal">
+        <!-- My Registrations Modal -->
+        <div id="registrationsModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Edit Profile</h3>
-                    <button class="close-btn" onclick="closeModal('editProfileModal')">&times;</button>
+                    <h3 class="modal-title">My Registrations</h3>
+                    <button class="close-btn" onclick="closeModal('registrationsModal')">&times;</button>
                 </div>
                 
-                <form id="editProfileForm">
+                <div id="registrationsList">
+                    <!-- Registration list will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Modal -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Login to Your Account</h3>
+                    <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
+                </div>
+                
+                <form id="loginForm">
                     <div class="form-group">
-                        <label for="editPlayerName">Player Name</label>
-                        <input type="text" id="editPlayerName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editPlayerUID">Free Fire UID</label>
-                        <input type="text" id="editPlayerUID" required>
+                        <label class="form-label">Email or Phone</label>
+                        <input type="text" class="form-input" id="loginEmail" placeholder="Enter email or phone number" required>
                     </div>
                     
-                    <div class="flex gap-1">
-                        <button type="button" class="btn btn-primary" onclick="closeModal('editProfileModal')">
-                            Cancel
-                        </button>
-                        <button type="submit" class="btn btn-success">
-                            Save Changes
-                        </button>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Enter password" required>
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="rememberMe">
+                        <label for="rememberMe" style="margin: 0; font-size: 0.9rem;">Remember me</label>
                     </div>
                 </form>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn btn-primary" onclick="loginUser()" style="width: 100%;">
+                        <span id="loginBtnText">Login</span>
+                        <span id="loginBtnLoader" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <p style="margin-bottom: 1rem; color: #64748B;">Don't have an account?</p>
+                    <button class="modal-btn btn-secondary" onclick="openRegisterModal()" style="width: 100%;">
+                        Create New Account
+                    </button>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                        <a href="#" onclick="openForgotPasswordModal()" style="color: var(--accent-blue); text-decoration: none;">
+                            Forgot Password?
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Modal -->
+        <div id="registerModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Create New Account</h3>
+                    <button class="close-btn" onclick="closeModal('registerModal')">&times;</button>
+                </div>
+                
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" id="registerName" placeholder="Enter your full name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="registerEmail" placeholder="Enter email address" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" class="form-input" id="registerPhone" placeholder="Enter phone number" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Free Fire UID</label>
+                        <input type="text" class="form-input" id="registerFFUID" placeholder="Enter Free Fire UID" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="registerPassword" placeholder="Create password (min 6 characters)" required minlength="6">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-input" id="confirmPassword" placeholder="Confirm your password" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Referral Code (Optional)</label>
+                        <input type="text" class="form-input" id="referralCodeInput" placeholder="Enter referral code if you have one">
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <label for="agreeTerms" style="margin: 0; font-size: 0.9rem; line-height: 1.4;">
+                            I agree to the <a href="#" style="color: var(--accent-blue);">Terms & Conditions</a> and <a href="#" style="color: var(--accent-blue);">Privacy Policy</a>
+                        </label>
+                    </div>
+                </form>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn btn-primary" onclick="registerUser()" style="width: 100%;">
+                        <span id="registerBtnText">Create Account</span>
+                        <span id="registerBtnLoader" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <p style="margin-bottom: 1rem; color: #64748B;">Already have an account?</p>
+                    <button class="modal-btn btn-secondary" onclick="openLoginModal()" style="width: 100%;">
+                        Login to Your Account
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forgot Password Modal -->
+        <div id="forgotPasswordModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Reset Password</h3>
+                    <button class="close-btn" onclick="closeModal('forgotPasswordModal')">&times;</button>
+                </div>
+                
+                <p style="margin-bottom: 1.5rem; color: #64748B;">
+                    Enter your email address and we'll send you a link to reset your password.
+                </p>
+                
+                <form id="forgotPasswordForm">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" id="forgotEmail" placeholder="Enter your email" required>
+                    </div>
+                </form>
+                
+                <div class="modal-footer">
+                    <button class="modal-btn btn-secondary" onclick="closeModal('forgotPasswordModal')">Cancel</button>
+                    <button class="modal-btn btn-primary" onclick="resetPassword()">
+                        <span id="resetBtnText">Send Reset Link</span>
+                        <span id="resetBtnLoader" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast for notifications -->
-    <div id="toast" class="toast"></div>
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+
+    <!-- Razorpay SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- QR Code Generator - Fast DOM Version -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 
     <script>
-        // Firebase Configuration (Replace with your config)
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "your-api-key",
             authDomain: "your-project.firebaseapp.com",
@@ -781,500 +1134,826 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // Global Variables
+        // App State
         let currentUser = null;
-        let userProfile = {
-            name: 'Unknown Player',
-            uid: 'Not Set',
-            walletBalance: 500,
-            referralCode: 'REF2025ABC',
-            referralsCount: 0,
-            referralEarnings: 0,
-            tournamentsJoined: 0,
-            totalWinnings: 0
-        };
+        let currentTournament = null;
+        let tournaments = [];
+        let userRegistrations = [];
 
-        // Sample tournament data
+        // Sample Data
         const sampleTournaments = [
             {
                 id: 'tour1',
-                title: 'Free Fire Classic',
-                prize: '₹5,000',
-                entryFee: 50,
-                maxPlayers: 100,
-                currentPlayers: 67,
+                title: 'Elite Championship',
+                matchTime: '2025-01-15T18:00:00',
                 map: 'Bermuda',
-                time: '2025-01-20T18:00',
-                status: 'live',
-                roomId: '12345',
-                roomPass: 'ABCDE'
+                prize: 5000,
+                entryFee: 100,
+                roomId: '123456',
+                roomPass: 'elite123',
+                maxPlayers: 50,
+                currentPlayers: 42,
+                status: 'live'
             },
             {
                 id: 'tour2', 
-                title: 'Clash Royale',
-                prize: '₹2,500',
-                entryFee: 25,
-                maxPlayers: 50,
-                currentPlayers: 32,
+                title: 'Weekend Warriors',
+                matchTime: '2025-01-16T20:00:00',
                 map: 'Purgatory',
-                time: '2025-01-21T19:30',
-                status: 'upcoming',
-                roomId: '67890',
-                roomPass: 'FGHIJ'
+                prize: 2500,
+                entryFee: 50,
+                roomId: '789012',
+                roomPass: 'week789',
+                maxPlayers: 100,
+                currentPlayers: 67,
+                status: 'upcoming'
             },
             {
                 id: 'tour3',
-                title: 'Pro Championship',
-                prize: '₹10,000',
-                entryFee: 100,
-                maxPlayers: 200,
-                currentPlayers: 156,
+                title: 'Mega Battle',
+                matchTime: '2025-01-17T19:30:00',
                 map: 'Kalahari',
-                time: '2025-01-22T20:00',
-                status: 'upcoming',
-                roomId: '11111',
-                roomPass: 'KLMNO'
+                prize: 10000,
+                entryFee: 200,
+                roomId: '345678',
+                roomPass: 'mega456',
+                maxPlayers: 80,
+                currentPlayers: 15,
+                status: 'upcoming'
             }
         ];
 
-        // Authentication state change listener
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                loadUserProfile();
-            } else {
-                // Sign in anonymously for demo
-                auth.signInAnonymously();
-            }
-        });
-
-        // Initialize app
+        // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
-            loadTournaments();
-            updateUI();
+            initializeApp();
         });
 
-        // Navigation functions
-        function showSection(sectionName) {
+        function initializeApp() {
+            tournaments = sampleTournaments;
+            
+            // Check if user is logged in
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // User is logged in
+                    loadUserData(user);
+                    showUserInterface();
+                } else {
+                    // User is not logged in
+                    showGuestInterface();
+                }
+            });
+            
+            loadTournaments();
+        }
+
+        async function loadUserData(user) {
+            try {
+                // Load user profile from Firestore
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: userData.name,
+                        phone: userData.phone,
+                        ffUID: userData.ffUID,
+                        walletBalance: userData.walletBalance || 0,
+                        referralCode: userData.referralCode,
+                        referralEarnings: userData.referralEarnings || 0,
+                        joinedAt: userData.joinedAt
+                    };
+                } else {
+                    // Create user document if doesn't exist
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || 'User',
+                        walletBalance: 0,
+                        referralCode: generateReferralCode(),
+                        referralEarnings: 0,
+                        joinedAt: new Date()
+                    };
+                    await db.collection('users').doc(user.uid).set(currentUser);
+                }
+                updateWalletDisplay();
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                showNotification('Error loading user data', 'error');
+            }
+        }
+
+        function showUserInterface() {
+            document.getElementById('userSection').style.display = 'flex';
+            document.getElementById('userMenu').style.display = 'flex';
+            document.getElementById('guestSection').style.display = 'none';
+        }
+
+        function showGuestInterface() {
+            document.getElementById('userSection').style.display = 'none';
+            document.getElementById('userMenu').style.display = 'none';
+            document.getElementById('guestSection').style.display = 'flex';
+            currentUser = null;
+        }
+
+        function generateReferralCode() {
+            return 'FF2025' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        }
+
+        // Navigation Functions
+        function showSection(sectionId) {
             // Hide all sections
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
             
-            // Remove active class from all tabs
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update nav tabs
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
+            event.target.classList.add('active');
+
+            // Load section-specific data
+            if (sectionId === 'tournaments') {
+                loadAllTournaments();
+            } else if (sectionId === 'profile') {
+                loadUserProfile();
+            }
+        }
+
+        function filterTournaments(status) {
+            const filteredTournaments = tournaments.filter(t => t.status === status);
+            renderTournaments(filteredTournaments, 'allTournaments');
             
-            // Show selected section
-            document.getElementById(sectionName).classList.add('active');
-            
-            // Add active class to clicked tab
+            // Update tournament tabs
+            document.querySelectorAll('.tournament-tabs .nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
             event.target.classList.add('active');
         }
 
-        // Load tournaments
+        // Tournament Functions
         function loadTournaments() {
-            const featuredContainer = document.getElementById('featuredTournaments');
-            const allContainer = document.getElementById('allTournaments');
-            
-            // Load featured tournaments (first 2)
-            featuredContainer.innerHTML = '';
-            sampleTournaments.slice(0, 2).forEach(tournament => {
-                featuredContainer.appendChild(createTournamentCard(tournament));
-            });
-            
-            // Load all tournaments
-            allContainer.innerHTML = '';
-            sampleTournaments.forEach(tournament => {
-                allContainer.appendChild(createTournamentCard(tournament));
+            const liveTournaments = tournaments.filter(t => t.status === 'live');
+            renderTournaments(liveTournaments, 'liveTournaments');
+        }
+
+        function loadAllTournaments() {
+            renderTournaments(tournaments, 'allTournaments');
+        }
+
+        function renderTournaments(tournamentList, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            tournamentList.forEach(tournament => {
+                const card = createTournamentCard(tournament);
+                container.appendChild(card);
             });
         }
 
-        // Create tournament card
         function createTournamentCard(tournament) {
             const card = document.createElement('div');
             card.className = 'tournament-card';
-            card.dataset.status = tournament.status;
             
-            const progressPercentage = (tournament.currentPlayers / tournament.maxPlayers) * 100;
-            const timeStr = new Date(tournament.time).toLocaleString('en-IN', {
-                month: 'short',
+            const matchTime = new Date(tournament.matchTime);
+            const timeString = matchTime.toLocaleString('en-IN', {
                 day: 'numeric',
+                month: 'short',
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            
+
+            const canJoin = tournament.currentPlayers < tournament.maxPlayers && 
+                           currentUser.walletBalance >= tournament.entryFee;
+
             card.innerHTML = `
                 <div class="tournament-header">
                     <h3 class="tournament-title">${tournament.title}</h3>
-                    <div class="tournament-prize">${tournament.prize}</div>
+                    <span class="tournament-status status-${tournament.status}">
+                        ${tournament.status.toUpperCase()}
+                    </span>
                 </div>
                 
                 <div class="tournament-details">
                     <div class="detail-item">
-                        <span>🗺️ ${tournament.map}</span>
+                        <i class="fas fa-clock detail-icon"></i>
+                        <span>${timeString}</span>
                     </div>
                     <div class="detail-item">
-                        <span>⏰ ${timeStr}</span>
+                        <i class="fas fa-map detail-icon"></i>
+                        <span>${tournament.map}</span>
                     </div>
                     <div class="detail-item">
-                        <span>💰 Entry: ₹${tournament.entryFee}</span>
+                        <i class="fas fa-users detail-icon"></i>
+                        <span>${tournament.currentPlayers}/${tournament.maxPlayers}</span>
                     </div>
                     <div class="detail-item">
-                        <span>🎮 ${tournament.status === 'live' ? 'LIVE' : 'Upcoming'}</span>
+                        <i class="fas fa-coins detail-icon"></i>
+                        <span>₹${tournament.entryFee}</span>
                     </div>
                 </div>
                 
-                <div class="tournament-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${progressPercentage}%"></div>
-                    </div>
-                    <div class="progress-text">
-                        ${tournament.currentPlayers}/${tournament.maxPlayers} players joined
-                    </div>
+                <div class="tournament-footer">
+                    <div class="prize-amount">₹${tournament.prize.toLocaleString()}</div>
+                    <button class="join-button" ${!canJoin ? 'disabled' : ''} 
+                            onclick="openRegistrationModal('${tournament.id}')">
+                        ${canJoin ? 'Join Now' : 'Full/Low Balance'}
+                    </button>
                 </div>
-                
-                <button class="btn ${tournament.status === 'live' ? 'btn-success' : 'btn-primary'}" 
-                        onclick="openRegistrationModal('${tournament.id}')">
-                    ${tournament.status === 'live' ? '🔴 Join Live' : '⚡ Join Tournament'}
-                </button>
             `;
-            
+
             return card;
         }
 
-        // Filter tournaments
-        function filterTournaments(status) {
-            // Update filter buttons
-            document.querySelectorAll('.tab-filter').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Filter tournament cards
-            document.querySelectorAll('#allTournaments .tournament-card').forEach(card => {
-                if (status === 'all' || card.dataset.status === status) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-
-        // Modal functions
         function openRegistrationModal(tournamentId) {
-            const tournament = sampleTournaments.find(t => t.id === tournamentId);
-            if (!tournament) return;
-            
-            // Check wallet balance
-            if (userProfile.walletBalance < tournament.entryFee) {
-                showToast('Insufficient balance! Please top up your wallet.', 'error');
+            if (!currentUser) {
+                showNotification('Please login to join tournaments', 'warning');
+                openLoginModal();
                 return;
             }
-            
-            // Populate tournament details
+
+            currentTournament = tournaments.find(t => t.id === tournamentId);
+            if (!currentTournament) return;
+
             document.getElementById('tournamentDetails').innerHTML = `
-                <div class="tournament-card">
-                    <h4>${tournament.title}</h4>
-                    <p><strong>Prize Pool:</strong> ${tournament.prize}</p>
-                    <p><strong>Entry Fee:</strong> ₹${tournament.entryFee}</p>
-                    <p><strong>Map:</strong> ${tournament.map}</p>
-                    <p><strong>Time:</strong> ${new Date(tournament.time).toLocaleString()}</p>
+                <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4>${currentTournament.title}</h4>
+                    <p><strong>Entry Fee:</strong> ₹${currentTournament.entryFee}</p>
+                    <p><strong>Prize Pool:</strong> ₹${currentTournament.prize}</p>
+                    <p><strong>Your Balance:</strong> ₹${currentUser.walletBalance}</p>
                 </div>
             `;
-            
-            // Pre-fill form
-            document.getElementById('playerNameInput').value = userProfile.name;
-            document.getElementById('freeFireUID').value = userProfile.uid;
-            
-            // Store tournament ID for submission
-            document.getElementById('registrationForm').dataset.tournamentId = tournamentId;
-            
+
+            // Pre-fill with user data
+            document.getElementById('playerName').value = currentUser.name;
+            document.getElementById('playerUID').value = currentUser.ffUID;
+
             document.getElementById('registrationModal').classList.add('active');
         }
 
-        function openTopUpModal() {
-            document.getElementById('topUpModal').classList.add('active');
+        async function processTournamentJoin() {
+            if (!currentTournament) return;
+
+            const joinBtn = document.getElementById('joinBtnText');
+            const loader = document.getElementById('joinBtnLoader');
+            
+            joinBtn.style.display = 'none';
+            loader.style.display = 'inline-block';
+
+            try {
+                // Simulate payment processing
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Check wallet balance
+                if (currentUser.walletBalance < currentTournament.entryFee) {
+                    throw new Error('Insufficient wallet balance');
+                }
+
+                // Deduct entry fee
+                currentUser.walletBalance -= currentTournament.entryFee;
+                updateWalletDisplay();
+
+                // Add registration
+                userRegistrations.push({
+                    id: Date.now().toString(),
+                    tournamentId: currentTournament.id,
+                    tournamentTitle: currentTournament.title,
+                    entryFee: currentTournament.entryFee,
+                    joinedAt: new Date(),
+                    status: 'active'
+                });
+
+                // Update tournament player count
+                currentTournament.currentPlayers++;
+
+                showNotification('Successfully joined tournament!', 'success');
+                closeModal('registrationModal');
+                loadTournaments();
+                loadAllTournaments();
+
+            } catch (error) {
+                showNotification(error.message, 'error');
+            } finally {
+                joinBtn.style.display = 'inline';
+                loader.style.display = 'none';
+            }
         }
 
-        function openEditProfileModal() {
-            document.getElementById('editPlayerName').value = userProfile.name;
-            document.getElementById('editPlayerUID').value = userProfile.uid;
-            document.getElementById('editProfileModal').classList.add('active');
+        // Referral Functions
+        function copyReferralCode() {
+            const code = document.getElementById('userReferralCode').textContent;
+            navigator.clipboard.writeText(code);
+            showNotification('Referral code copied!', 'success');
+        }
+
+        function shareOnWhatsApp() {
+            const message = `Join Free Fire Tournaments and earn real money! Use my referral code: ${currentUser.referralCode}`;
+            const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+        }
+
+        function shareOnTelegram() {
+            const message = `Join Free Fire Tournaments and earn real money! Use my referral code: ${currentUser.referralCode}`;
+            const url = `https://t.me/share/url?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+        }
+
+        function copyReferralLink() {
+            const link = `https://fftournaments.com/join?ref=${currentUser.referralCode}`;
+            navigator.clipboard.writeText(link);
+            showNotification('Referral link copied!', 'success');
+        }
+
+        // Payment Functions
+        function openTopupModal() {
+            if (!currentUser) {
+                showNotification('Please login to access wallet', 'warning');
+                openLoginModal();
+                return;
+            }
+            
+            document.getElementById('topupModal').classList.add('active');
+            document.getElementById('qrSection').style.display = 'none';
+        }
+
+        function generatePaymentQR() {
+            const amount = parseFloat(document.getElementById('topupAmount').value);
+            if (!amount || amount < 50) {
+                showNotification('Minimum top-up amount is ₹50', 'error');
+                return;
+            }
+
+            // Round amount to 2 decimal places to ensure exact payment
+            const exactAmount = Math.round(amount * 100) / 100;
+            
+            document.getElementById('qrAmount').textContent = exactAmount;
+            document.getElementById('qrSection').style.display = 'block';
+            
+            // Generate UPI payment link with exact amount
+            const upiId = 'Bittukr@fam';
+            const merchantName = 'Tournament Platform';
+            const transactionNote = `Wallet Topup Rs${exactAmount}`;
+            const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${exactAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+            
+            // Clear container and start fast generation
+            const qrContainer = document.querySelector('.qr-code');
+            qrContainer.innerHTML = '<div style="padding: 1rem; text-align: center;"><i class="fas fa-cog fa-spin" style="font-size: 1.5rem; color: var(--accent-blue);"></i><br><small>Generating...</small></div>';
+            
+            try {
+                // Fast QR Code generation
+                const qr = qrcode(0, 'M'); // Type 0 = auto, Error correction level M
+                qr.addData(upiLink);
+                qr.make();
+                
+                // Create QR code HTML instantly
+                const qrHTML = qr.createImgTag(4, 8); // cell size 4, margin 8
+                
+                // Clear container and add QR code
+                qrContainer.innerHTML = `
+                    <div style="text-align: center;">
+                        ${qrHTML}
+                        <div style="margin-top: 1rem;">
+                            <p style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #64748B;">
+                                Pay exactly <strong>₹${exactAmount}</strong>
+                            </p>
+                            <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block; margin-top: 0.5rem;">
+                                <i class="fas fa-mobile-alt"></i> Open UPI App
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                // Style the QR code image
+                const qrImg = qrContainer.querySelector('img');
+                if (qrImg) {
+                    qrImg.style.cssText = `
+                        border: 2px solid var(--border);
+                        border-radius: 8px;
+                        background: white;
+                        padding: 10px;
+                        max-width: 200px;
+                        height: auto;
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('QR Code generation error:', error);
+                qrContainer.innerHTML = `
+                    <div style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 1rem; color: var(--accent-red);">⚠️</div>
+                        <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent-red);">QR Generation Failed</p>
+                        <a href="${upiLink}" style="background: var(--accent-blue); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-size: 0.9rem; display: inline-block;">
+                            <i class="fas fa-mobile-alt"></i> Pay ₹${exactAmount} via UPI
+                        </a>
+                    </div>
+                `;
+            }
+            
+            // Show "I Have Paid" button
+            document.getElementById('paidBtn').style.display = 'inline-block';
+            
+            // Store exact amount for validation
+            window.currentTopupAmount = exactAmount;
+        }
+
+        function showOrderIdSection() {
+            document.getElementById('orderIdSection').style.display = 'block';
+            document.getElementById('topupModalFooter').style.display = 'none';
+        }
+
+        async function submitTopupRequest() {
+            const exactAmount = window.currentTopupAmount || parseFloat(document.getElementById('topupAmount').value);
+            const orderId = document.getElementById('orderIdInput').value.trim();
+            
+            if (!orderId) {
+                showNotification('Please enter transaction ID', 'error');
+                return;
+            }
+
+            if (!exactAmount || exactAmount < 50) {
+                showNotification('Invalid amount', 'error');
+                return;
+            }
+
+            if (!currentUser) {
+                showNotification('Please login first', 'error');
+                return;
+            }
+
+            try {
+                // Create topup request with exact amount
+                const topupRequest = {
+                    userId: currentUser.uid,
+                    userName: currentUser.name,
+                    userEmail: currentUser.email,
+                    amount: exactAmount,
+                    orderId: orderId,
+                    upiId: 'Bittukr@fam',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'pending',
+                    note: `Wallet Topup Rs${exactAmount}`
+                };
+
+                // Save to Firestore
+                await db.collection('topupRequests').add(topupRequest);
+
+                showNotification(`Topup request for ₹${exactAmount} submitted! Admin will verify payment.`, 'success');
+                closeModal('topupModal');
+                
+                // Reset modal
+                document.getElementById('topupAmount').value = '';
+                document.getElementById('orderIdInput').value = '';
+                document.getElementById('qrSection').style.display = 'none';
+                document.getElementById('orderIdSection').style.display = 'none';
+                document.getElementById('topupModalFooter').style.display = 'flex';
+                document.getElementById('paidBtn').style.display = 'none';
+                window.currentTopupAmount = null;
+
+            } catch (error) {
+                console.error('Error submitting topup request:', error);
+                showNotification('Error submitting topup request. Please try again.', 'error');
+            }
+        }
+
+        // Profile Functions
+        function loadUserProfile() {
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userUID').textContent = currentUser.ffUID;
+            document.getElementById('tournamentsJoined').textContent = userRegistrations.length;
+            document.getElementById('userReferralCode').textContent = currentUser.referralCode;
+            document.getElementById('referralEarnings').textContent = currentUser.referralEarnings;
+        }
+
+        function openRegistrationsModal() {
+            if (!currentUser) {
+                showNotification('Please login to view registrations', 'warning');
+                openLoginModal();
+                return;
+            }
+
+            const list = document.getElementById('registrationsList');
+            list.innerHTML = '';
+
+            if (userRegistrations.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #64748B;">No tournament registrations yet</p>';
+            } else {
+                userRegistrations.forEach(reg => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;';
+                    item.innerHTML = `
+                        <h4>${reg.tournamentTitle}</h4>
+                        <p>Entry Fee: ₹${reg.entryFee}</p>
+                        <p>Status: <span style="color: var(--success-green);">${reg.status}</span></p>
+                        <p>Joined: ${reg.joinedAt.toLocaleDateString()}</p>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+
+            document.getElementById('registrationsModal').classList.add('active');
+        }
+
+        // Utility Functions
+        function updateWalletDisplay() {
+            document.getElementById('walletAmount').textContent = currentUser.walletBalance;
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
         }
 
-        // Form handling
-        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const tournamentId = this.dataset.tournamentId;
-            const tournament = sampleTournaments.find(t => t.id === tournamentId);
-            
-            if (!tournament) return;
-            
-            const playerName = document.getElementById('playerNameInput').value;
-            const ffUID = document.getElementById('freeFireUID').value;
-            
-            if (!playerName || !ffUID) {
-                showToast('Please fill all fields', 'error');
-                return;
-            }
-            
-            // Process payment and registration
-            await joinTournament(tournamentId, {
-                playerName,
-                ffUID,
-                entryFee: tournament.entryFee
-            });
-        });
-
-        document.getElementById('editProfileForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const newName = document.getElementById('editPlayerName').value;
-            const newUID = document.getElementById('editPlayerUID').value;
-            
-            if (!newName || !newUID) {
-                showToast('Please fill all fields', 'error');
-                return;
-            }
-            
-            // Update profile
-            userProfile.name = newName;
-            userProfile.uid = newUID;
-            updateUI();
-            
-            closeModal('editProfileModal');
-            showToast('Profile updated successfully!');
-        });
-
-        // Tournament registration
-        async function joinTournament(tournamentId, playerData) {
-            try {
-                const tournament = sampleTournaments.find(t => t.id === tournamentId);
-                
-                // Check balance again
-                if (userProfile.walletBalance < playerData.entryFee) {
-                    showToast('Insufficient balance!', 'error');
-                    return;
-                }
-                
-                // Process payment
-                const paymentSuccess = await processPayment(playerData.entryFee, `Tournament: ${tournament.title}`);
-                
-                if (paymentSuccess) {
-                    // Deduct from wallet
-                    userProfile.walletBalance -= playerData.entryFee;
-                    userProfile.tournamentsJoined++;
-                    
-                    // Update tournament
-                    tournament.currentPlayers++;
-                    
-                    // Save to Firestore (placeholder)
-                    await saveRegistration(tournamentId, playerData);
-                    
-                    updateUI();
-                    loadTournaments();
-                    closeModal('registrationModal');
-                    
-                    showToast(`Successfully joined ${tournament.title}!`);
-                }
-            } catch (error) {
-                console.error('Error joining tournament:', error);
-                showToast('Registration failed. Please try again.', 'error');
-            }
-        }
-
-        // Payment processing with Razorpay
-        async function processPayment(amount, description) {
-            return new Promise((resolve) => {
-                const options = {
-                    key: 'rzp_test_your_key_here', // Replace with your Razorpay key
-                    amount: amount * 100, // Amount in paise
-                    currency: 'INR',
-                    name: 'Tournament Arena',
-                    description: description,
-                    image: '🏆',
-                    handler: function(response) {
-                        console.log('Payment successful:', response);
-                        resolve(true);
-                    },
-                    prefill: {
-                        name: userProfile.name,
-                        email: 'user@example.com'
-                    },
-                    theme: {
-                        color: '#2563EB'
-                    },
-                    modal: {
-                        ondismiss: function() {
-                            resolve(false);
-                        }
-                    }
-                };
-                
-                const rzp = new Razorpay(options);
-                rzp.open();
-            });
-        }
-
-        // Top up wallet
-        function selectAmount(amount) {
-            document.getElementById('customAmount').value = amount;
-        }
-
-        async function processTopUp() {
-            const amount = parseInt(document.getElementById('customAmount').value);
-            
-            if (!amount || amount < 50) {
-                showToast('Minimum top-up amount is ₹50', 'error');
-                return;
-            }
-            
-            if (amount > 10000) {
-                showToast('Maximum top-up amount is ₹10,000', 'error');
-                return;
-            }
-            
-            const paymentSuccess = await processPayment(amount, 'Wallet Top-up');
-            
-            if (paymentSuccess) {
-                userProfile.walletBalance += amount;
-                updateUI();
-                closeModal('topUpModal');
-                showToast(`₹${amount} added to wallet successfully!`);
-            }
-        }
-
-        // Referral functions
-        function shareWhatsApp() {
-            const message = `🎮 Join Tournament Arena and win cash prizes! Use my referral code: ${userProfile.referralCode}\n\nDownload now: ${window.location.href}`;
-            const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-            window.open(url, '_blank');
-        }
-
-        function shareTelegram() {
-            const message = `🎮 Join Tournament Arena and win cash prizes! Use my referral code: ${userProfile.referralCode}\n\nDownload now: ${window.location.href}`;
-            const url = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(message)}`;
-            window.open(url, '_blank');
-        }
-
-        function copyReferralCode() {
-            navigator.clipboard.writeText(userProfile.referralCode).then(() => {
-                showToast('Referral code copied to clipboard!');
-            });
-        }
-
-        // Firebase functions (placeholders)
-        async function loadUserProfile() {
-            // Load user profile from Firestore
-            try {
-                // const userDoc = await db.collection('users').doc(currentUser.uid).get();
-                // if (userDoc.exists) {
-                //     userProfile = { ...userProfile, ...userDoc.data() };
-                // }
-                updateUI();
-            } catch (error) {
-                console.error('Error loading profile:', error);
-            }
-        }
-
-        async function saveRegistration(tournamentId, playerData) {
-            // Save registration to Firestore
-            try {
-                // await db.collection('tournaments').doc(tournamentId)
-                //         .collection('registrations').add({
-                //     userId: currentUser.uid,
-                //     playerName: playerData.playerName,
-                //     ffUID: playerData.ffUID,
-                //     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                //     entryFee: playerData.entryFee
-                // });
-                
-                // await db.collection('users').doc(currentUser.uid).update({
-                //     walletBalance: userProfile.walletBalance,
-                //     tournamentsJoined: userProfile.tournamentsJoined
-                // });
-                
-                console.log('Registration saved successfully');
-            } catch (error) {
-                console.error('Error saving registration:', error);
-            }
-        }
-
-        // UI Update functions
-        function updateUI() {
-            // Update wallet balance
-            document.getElementById('walletAmount').textContent = `₹${userProfile.walletBalance}`;
-            
-            // Update profile section
-            document.getElementById('playerName').textContent = userProfile.name;
-            document.getElementById('playerUID').textContent = userProfile.uid;
-            document.getElementById('profileAvatar').textContent = userProfile.name.charAt(0).toUpperCase();
-            
-            // Update stats
-            document.getElementById('referralCount').textContent = userProfile.referralsCount;
-            document.getElementById('referralEarnings').textContent = `₹${userProfile.referralEarnings}`;
-            document.getElementById('tournamentsJoined').textContent = userProfile.tournamentsJoined;
-            document.getElementById('totalWinnings').textContent = `₹${userProfile.totalWinnings}`;
-            
-            // Update referral code
-            document.getElementById('referralCode').textContent = userProfile.referralCode;
-        }
-
-        // Toast notifications
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type} show`;
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
             
             setTimeout(() => {
-                toast.classList.remove('show');
+                notification.classList.remove('show');
             }, 3000);
         }
 
-        // My registrations
-        function showMyRegistrations() {
-            // This would typically show a modal or navigate to a page with user's registrations
-            const registrations = [
-                { tournament: 'Free Fire Classic', status: 'Registered', time: '2025-01-20T18:00' },
-                { tournament: 'Pro Championship', status: 'Registered', time: '2025-01-22T20:00' }
-            ];
-            
-            let registrationList = registrations.map(reg => 
-                `<div class="stat-card mb-1">
-                    <h4>${reg.tournament}</h4>
-                    <p>Status: ${reg.status}</p>
-                    <p>Time: ${new Date(reg.time).toLocaleString()}</p>
-                </div>`
-            ).join('');
-            
-            if (registrations.length === 0) {
-                registrationList = '<p class="text-center">No registrations yet.</p>';
-            }
-            
-            // You could create a modal for this or use alert for demo
-            alert('My Registrations:\n\n' + registrations.map(r => `${r.tournament} - ${r.status}`).join('\n'));
+        // Authentication Functions
+        function openLoginModal() {
+            closeAllModals();
+            document.getElementById('loginModal').classList.add('active');
         }
 
-        // Close modals on outside click
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('modal')) {
-                e.target.classList.remove('active');
-            }
-        });
+        function openRegisterModal() {
+            closeAllModals();
+            document.getElementById('registerModal').classList.add('active');
+        }
 
-        // Prevent form submission on Enter in number inputs
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && e.target.type === 'number') {
-                e.preventDefault();
+        function openForgotPasswordModal() {
+            closeAllModals();
+            document.getElementById('forgotPasswordModal').classList.add('active');
+        }
+
+        async function loginUser() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showNotification('Please fill all fields', 'error');
+                return;
             }
-        });
+
+            const loginBtn = document.getElementById('loginBtnText');
+            const loginLoader = document.getElementById('loginBtnLoader');
+            loginBtn.style.display = 'none';
+            loginLoader.style.display = 'inline-block';
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('Login successful!', 'success');
+                closeModal('loginModal');
+                
+                // Clear form
+                document.getElementById('loginForm').reset();
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                let errorMessage = 'Login failed';
+                
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'No account found with this email';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Incorrect password';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Invalid email address';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = 'Too many failed attempts. Try again later';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                loginBtn.style.display = 'inline';
+                loginLoader.style.display = 'none';
+            }
+        }
+
+        async function registerUser() {
+            const name = document.getElementById('registerName').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const phone = document.getElementById('registerPhone').value.trim();
+            const ffUID = document.getElementById('registerFFUID').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const referralCode = document.getElementById('referralCodeInput').value.trim();
+            const agreeTerms = document.getElementById('agreeTerms').checked;
+
+            // Validation
+            if (!name || !email || !phone || !ffUID || !password || !confirmPassword) {
+                showNotification('Please fill all required fields', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            if (!agreeTerms) {
+                showNotification('Please agree to Terms & Conditions', 'error');
+                return;
+            }
+
+            const registerBtn = document.getElementById('registerBtnText');
+            const registerLoader = document.getElementById('registerBtnLoader');
+            registerBtn.style.display = 'none';
+            registerLoader.style.display = 'inline-block';
+
+            try {
+                // Create user account
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Update user profile
+                await user.updateProfile({
+                    displayName: name
+                });
+
+                // Create user document in Firestore
+                const userData = {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    ffUID: ffUID,
+                    walletBalance: 0,
+                    referralCode: generateReferralCode(),
+                    referralEarnings: 0,
+                    tournamentsJoined: 0,
+                    totalWinnings: 0,
+                    joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'active'
+                };
+
+                // Load system settings for bonus amounts
+                const settingsDoc = await db.collection('settings').doc('system').get();
+                const settings = settingsDoc.exists ? settingsDoc.data() : {
+                    signupBonus: 25,
+                    referralBonus: 50,
+                    newUserReferralBonus: 25
+                };
+
+                // Handle referral bonus
+                if (referralCode) {
+                    const referrerQuery = await db.collection('users').where('referralCode', '==', referralCode).get();
+                    if (!referrerQuery.empty) {
+                        const referrerDoc = referrerQuery.docs[0];
+                        const referrerId = referrerDoc.id;
+                        const referrerData = referrerDoc.data();
+                        
+                        // Add referral bonus to referrer
+                        await db.collection('users').doc(referrerId).update({
+                            referralEarnings: (referrerData.referralEarnings || 0) + settings.referralBonus,
+                            walletBalance: (referrerData.walletBalance || 0) + settings.referralBonus
+                        });
+
+                        // Record referral
+                        userData.referredBy = referrerId;
+                        userData.walletBalance = settings.signupBonus + settings.newUserReferralBonus;
+                        
+                        showNotification(`Account created! You got ₹${settings.signupBonus} signup bonus + ₹${settings.newUserReferralBonus} referral bonus!`, 'success');
+                    } else {
+                        userData.walletBalance = settings.signupBonus;
+                        showNotification(`Account created! You got ₹${settings.signupBonus} signup bonus!`, 'success');
+                    }
+                } else {
+                    userData.walletBalance = settings.signupBonus;
+                    showNotification(`Account created! You got ₹${settings.signupBonus} signup bonus!`, 'success');
+                }
+
+                await db.collection('users').doc(user.uid).set(userData);
+
+                closeModal('registerModal');
+                
+                // Clear form
+                document.getElementById('registerForm').reset();
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                let errorMessage = 'Registration failed';
+                
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = 'Email already registered. Please login instead.';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Invalid email address';
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = 'Password is too weak';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                registerBtn.style.display = 'inline';
+                registerLoader.style.display = 'none';
+            }
+        }
+
+        async function resetPassword() {
+            const email = document.getElementById('forgotEmail').value.trim();
+
+            if (!email) {
+                showNotification('Please enter your email address', 'error');
+                return;
+            }
+
+            const resetBtn = document.getElementById('resetBtnText');
+            const resetLoader = document.getElementById('resetBtnLoader');
+            resetBtn.style.display = 'none';
+            resetLoader.style.display = 'inline-block';
+
+            try {
+                await auth.sendPasswordResetEmail(email);
+                showNotification('Password reset link sent to your email!', 'success');
+                closeModal('forgotPasswordModal');
+                document.getElementById('forgotPasswordForm').reset();
+                
+            } catch (error) {
+                console.error('Password reset error:', error);
+                let errorMessage = 'Failed to send reset email';
+                
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'No account found with this email';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Invalid email address';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                resetBtn.style.display = 'inline';
+                resetLoader.style.display = 'none';
+            }
+        }
+
+        async function logoutUser() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await auth.signOut();
+                    showNotification('Logged out successfully!', 'success');
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    showNotification('Logout failed', 'error');
+                }
+            }
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+
+        // Real-time updates simulation
+        setInterval(() => {
+            // Simulate live tournament updates
+            tournaments.forEach(tournament => {
+                if (tournament.status === 'live' && Math.random() > 0.8) {
+                    tournament.currentPlayers = Math.min(
+                        tournament.maxPlayers,
+                        tournament.currentPlayers + Math.floor(Math.random() * 3)
+                    );
+                }
+            });
+            
+            loadTournaments();
+            if (document.getElementById('tournaments').classList.contains('active')) {
+                loadAllTournaments();
+            }
+        }, 10000);
     </script>
 </body>
 </html>
